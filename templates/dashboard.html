@@ -1,0 +1,792 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid p-4">
+
+    <!-- TOP STATS BAR -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="glass-card stat-tile" data-filter-status="">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-lbl">Total Switches</div>
+                        <h2 class="mono stat-num text-primary-glow" id="statTotal">0</h2>
+                    </div>
+                    <i class="fa-solid fa-server stat-ico" style="color:var(--primary);"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="glass-card stat-tile" data-filter-status="online">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-lbl">Online</div>
+                        <h2 class="mono stat-num text-success-glow" id="statOnline">0</h2>
+                    </div>
+                    <i class="fa-solid fa-circle-check stat-ico" style="color:var(--success);"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="glass-card stat-tile" data-filter-status="offline">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-lbl">Offline</div>
+                        <h2 class="mono stat-num" id="statOffline" style="color:var(--danger);">0</h2>
+                    </div>
+                    <i class="fa-solid fa-circle-xmark stat-ico" style="color:var(--danger);"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="glass-card stat-tile" data-filter-status="scanning">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-lbl">Scanning</div>
+                        <h2 class="mono stat-num" id="statScanning" style="color:var(--warning);">0</h2>
+                    </div>
+                    <i class="fa-solid fa-satellite-dish stat-ico" style="color:var(--warning);"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUEUE BANNER -->
+    <div id="queueBanner" class="queue-banner" style="display:none;">
+        <div class="d-flex align-items-center gap-3">
+            <i class="fa-solid fa-circle-notch spinning" style="color:var(--primary); font-size:20px;"></i>
+            <div style="flex:1;">
+                <div style="font-weight:600; font-size:14px;" id="queueText">Scanning...</div>
+                <div class="queue-bar-wrap"><div class="queue-bar" id="queueBar"></div></div>
+            </div>
+            <div class="mono" style="color:var(--primary);" id="queueCounts">— / —</div>
+        </div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar glass-card mb-4">
+        <div class="row g-2 align-items-center">
+            <div class="col-lg-4 col-md-6">
+                <div class="search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="searchInput" placeholder="Search by name, IP, or model...">
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-3 col-6">
+                <select id="filterModel" class="cyber-select">
+                    <option value="">All Models</option>
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-3 col-6">
+                <select id="filterStatus" class="cyber-select">
+                    <option value="">All Status</option>
+                    <option value="online">Online</option>
+                    <option value="offline">Offline</option>
+                    <option value="scanning">Scanning</option>
+                    <option value="unknown">Unknown</option>
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-4 col-6">
+                <select id="sortBy" class="cyber-select">
+                    <option value="id:desc">Newest First</option>
+                    <option value="id:asc">Oldest First</option>
+                    <option value="name:asc">Name A → Z</option>
+                    <option value="name:desc">Name Z → A</option>
+                    <option value="ip:asc">IP Ascending</option>
+                    <option value="scanned:desc">Recently Scanned</option>
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-8 col-12 d-flex gap-2 justify-content-lg-end">
+                <button class="btn-neon flex-grow-1 flex-lg-grow-0" onclick="scanAll()" id="scanAllBtn">
+                    <i class="fa-solid fa-bolt"></i>Scan All
+                </button>
+                <button class="btn-outline-neon flex-grow-1 flex-lg-grow-0" data-bs-toggle="modal" data-bs-target="#csvModal">
+                    <i class="fa-solid fa-file-csv"></i>CSV
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BULK ACTION BAR -->
+    <div id="bulkBar" class="bulk-bar" style="display:none;">
+        <div class="d-flex align-items-center gap-3">
+            <span><b id="bulkCount">0</b> selected</span>
+            <button class="btn-mini-mini" onclick="scanSelected()">
+                <i class="fa-solid fa-satellite-dish"></i>Scan Selected
+            </button>
+            <button class="btn-mini-mini danger" onclick="deleteSelected()">
+                <i class="fa-solid fa-trash"></i>Delete
+            </button>
+            <button class="btn-mini-mini ghost" onclick="clearSelection()">
+                <i class="fa-solid fa-xmark"></i>Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- SWITCH GRID -->
+    <div id="switchGrid" class="row g-3"></div>
+
+    <!-- PAGINATION -->
+    <div id="pagination" class="pagination-wrap"></div>
+
+</div>
+
+<!-- CSV MODAL -->
+<div class="modal fade" id="csvModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cyber-modal">
+            <div class="modal-header">
+                <h5 class="text-primary-glow mb-0"><i class="fa-solid fa-file-csv me-2"></i>Bulk Import Switches</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/upload-csv" method="POST" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <p style="color:var(--muted); font-size:14px;">
+                        CSV Format: <code style="color:var(--primary);">name,ip,enable_pass</code>
+                    </p>
+                    <input type="file" name="csv_file" accept=".csv" required class="form-control cyber-input">
+                    <small class="text-muted mt-2 d-block">
+                        Global credentials apply to all switches automatically.
+                    </small>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn-neon"><i class="fa-solid fa-upload"></i>Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ========== STATS TILES ========== */
+.stat-tile { cursor: pointer; transition: all 0.25s; padding: 20px 24px; }
+.stat-tile:hover { transform: translateY(-3px); }
+.stat-tile.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0,212,255,0.3); }
+.stat-lbl { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
+.stat-num { font-size: 32px; font-weight: 700; margin: 4px 0 0; }
+.stat-ico { font-size: 32px; opacity: 0.4; }
+
+/* ========== QUEUE BANNER ========== */
+.queue-banner {
+    background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(124,58,237,0.08));
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    animation: slideIn 0.3s;
+}
+@keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+.queue-bar-wrap {
+    height: 4px; background: rgba(0,212,255,0.1);
+    border-radius: 2px; overflow: hidden; margin-top: 6px;
+}
+.queue-bar {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    box-shadow: 0 0 10px var(--primary);
+    transition: width 0.4s;
+}
+
+/* ========== TOOLBAR ========== */
+.toolbar { padding: 16px 20px; }
+.search-wrap {
+    position: relative;
+}
+.search-wrap i {
+    position: absolute; left: 14px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted); font-size: 13px;
+}
+.search-wrap input {
+    width: 100%;
+    background: var(--dark-3);
+    border: 1px solid rgba(0,212,255,0.2);
+    color: white;
+    padding: 11px 14px 11px 40px;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.25s;
+}
+.search-wrap input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.15);
+}
+.cyber-select {
+    width: 100%;
+    background: var(--dark-3);
+    border: 1px solid rgba(0,212,255,0.2);
+    color: var(--light);
+    padding: 11px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    transition: all 0.25s;
+    cursor: pointer;
+}
+.cyber-select:focus { border-color: var(--primary); }
+
+/* ========== BULK ACTION BAR ========== */
+.bulk-bar {
+    background: linear-gradient(135deg, rgba(255,0,110,0.1), rgba(124,58,237,0.1));
+    border: 1px solid rgba(255,0,110,0.3);
+    padding: 12px 20px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    animation: slideIn 0.25s;
+}
+.btn-mini-mini {
+    background: rgba(0,212,255,0.15);
+    color: var(--primary);
+    border: 1px solid rgba(0,212,255,0.3);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-mini-mini:hover { background: rgba(0,212,255,0.25); }
+.btn-mini-mini.danger { color: var(--danger); border-color: rgba(255,56,96,0.3); background: rgba(255,56,96,0.1); }
+.btn-mini-mini.danger:hover { background: rgba(255,56,96,0.2); }
+.btn-mini-mini.ghost { color: var(--muted); border-color: rgba(100,116,139,0.3); background: transparent; }
+
+/* ========== SWITCH CARD ========== */
+.sw-card {
+    position: relative;
+    padding: 18px;
+    border-radius: 14px;
+    background: rgba(26,31,58,0.6);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,212,255,0.15);
+    transition: all 0.25s;
+    animation: fadeInUp 0.35s ease-out backwards;
+}
+.sw-card:hover {
+    border-color: rgba(0,212,255,0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0,212,255,0.15);
+}
+.sw-card.selected {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(0,212,255,0.3), 0 10px 30px rgba(0,212,255,0.2);
+}
+.sw-check {
+    position: absolute; top: 14px; right: 14px;
+    width: 20px; height: 20px; cursor: pointer;
+    accent-color: var(--primary);
+}
+.sw-status-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 8px; vertical-align: middle;
+    position: relative;
+}
+.sw-status-dot.online  { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.sw-status-dot.offline { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.sw-status-dot.scanning{ background: var(--warning); box-shadow: 0 0 8px var(--warning); animation: pulse 1s infinite; }
+.sw-status-dot.unknown { background: var(--muted); }
+
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+.sw-name { font-size: 15px; font-weight: 700; color: white; margin: 0; }
+.sw-ip   { font-family: 'JetBrains Mono', monospace; color: var(--primary); font-size: 12px; }
+.sw-meta { font-size: 11px; color: var(--muted); margin-top: 10px; }
+.sw-model {
+    display: inline-block;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: rgba(124,58,237,0.2);
+    color: #c4b5fd;
+    padding: 3px 8px; border-radius: 12px;
+    border: 1px solid rgba(124,58,237,0.3);
+    margin-top: 4px;
+}
+.sw-progress {
+    height: 3px; background: rgba(0,212,255,0.1);
+    border-radius: 2px; overflow: hidden; margin-top: 8px;
+}
+.sw-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    transition: width 0.4s;
+}
+.sw-actions {
+    display: flex; gap: 8px; margin-top: 14px;
+}
+.sw-btn {
+    flex: 1;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white; text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px; font-weight: 600;
+    text-align: center;
+    border: none; cursor: pointer;
+    transition: all 0.2s;
+}
+.sw-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(0,212,255,0.4); color: white; }
+.sw-btn.scanning { opacity: 0.6; pointer-events: none; }
+.sw-btn-del {
+    width: 36px;
+    background: rgba(255,56,96,0.1);
+    color: var(--danger);
+    border: 1px solid rgba(255,56,96,0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.sw-btn-del:hover { background: rgba(255,56,96,0.25); }
+
+/* ========== PAGINATION ========== */
+.pagination-wrap {
+    display: flex; justify-content: center; align-items: center;
+    gap: 6px; margin-top: 30px;
+}
+.page-btn {
+    background: var(--dark-3); color: var(--light);
+    border: 1px solid rgba(0,212,255,0.2);
+    padding: 8px 14px; border-radius: 8px;
+    cursor: pointer; font-size: 13px;
+    transition: all 0.2s;
+}
+.page-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.page-btn.active { background: var(--primary); color: var(--dark-1); border-color: var(--primary); }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.cyber-input {
+    background: var(--dark-3) !important;
+    border: 1px solid rgba(0,212,255,0.2) !important;
+    color: white !important;
+    padding: 10px 14px; border-radius: 8px;
+}
+.cyber-modal {
+    background: var(--dark-2) !important;
+    border: 1px solid rgba(0,212,255,0.2) !important;
+    border-radius: 16px !important;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.empty-state {
+    text-align: center; padding: 80px 20px;
+    background: rgba(26,31,58,0.4);
+    border: 1px dashed rgba(0,212,255,0.3);
+    border-radius: 16px;
+}
+.empty-state i { font-size: 70px; color: var(--muted); opacity: 0.3; }
+</style>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let state = {
+    q: "", model: "", status: "",
+    sort: "id:desc",
+    page: 1, per_page: 24,
+    selected: new Set(),
+    switches: [],
+    total: 0, pages: 0,
+    queuePollTimer: null
+};
+
+const SWITCH_DETAIL_URL = id => `/switch/${id}`;
+
+// ============================================================
+// API
+// ============================================================
+async function fetchSwitches() {
+    const [sortCol, sortOrder] = state.sort.split(':');
+    const params = new URLSearchParams({
+        q: state.q, model: state.model, status: state.status,
+        sort: sortCol, order: sortOrder,
+        page: state.page, per_page: state.per_page
+    });
+    const r = await fetch(`/api/switches?${params}`);
+    const data = await r.json();
+    state.switches = data.switches;
+    state.total = data.total;
+    state.pages = data.pages;
+    renderGrid();
+    renderPagination();
+    updateBulkBar();
+}
+
+async function fetchStats() {
+    const r = await fetch('/api/stats');
+    const s = await r.json();
+    document.getElementById('statTotal').textContent    = s.total;
+    document.getElementById('statOnline').textContent   = s.online;
+    document.getElementById('statOffline').textContent  = s.offline;
+    document.getElementById('statScanning').textContent = s.scanning + s.active_count;
+
+    // populate model filter
+    const sel = document.getElementById('filterModel');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">All Models</option>' +
+        s.models.map(m => `<option value="${m.model}">${m.model} (${m.c})</option>`).join('');
+    sel.value = current;
+
+    // highlight active stat tile
+    document.querySelectorAll('.stat-tile').forEach(el => {
+        el.classList.toggle('active',
+            el.dataset.filterStatus === state.status && state.status !== '');
+    });
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderGrid() {
+    const grid = document.getElementById('switchGrid');
+    if (!state.switches.length) {
+        grid.innerHTML = `
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="fa-solid fa-inbox"></i>
+                    <h4 class="mt-3">No Switches Found</h4>
+                    <p style="color:var(--muted);">
+                        ${state.q || state.model || state.status
+                            ? 'Try changing your search or filters.'
+                            : 'Add your first Cisco switch to get started.'}
+                    </p>
+                    ${!state.q && !state.model && !state.status
+                        ? '<a href="/add" class="btn-neon mt-3"><i class="fa-solid fa-plus"></i>Add Switch</a>'
+                        : ''}
+                </div>
+            </div>`;
+        return;
+    }
+
+    grid.innerHTML = state.switches.map((sw, idx) => {
+        const sel = state.selected.has(sw.id);
+        const live = sw.live_status;
+        const displayStatus = live === 'running' ? 'scanning'
+                            : live === 'queued'  ? 'scanning'
+                            : (sw.last_status || 'unknown');
+        const dotCls = ['online','offline','scanning'].includes(displayStatus)
+                        ? displayStatus : 'unknown';
+        const scanning = live === 'running';
+        const queued   = live === 'queued';
+        const progress = sw.live_progress || 0;
+
+        return `
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="sw-card ${sel ? 'selected' : ''}"
+                 style="animation-delay:${idx * 0.03}s">
+                <input type="checkbox" class="sw-check" ${sel ? 'checked' : ''}
+                       onchange="toggleSelect(${sw.id}, this.checked)">
+
+                <div class="d-flex align-items-start mb-2">
+                    <div style="flex:1;">
+                        <div class="sw-status-dot ${dotCls}"></div>
+                        <span style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); font-weight:600;">
+                            ${displayStatus}
+                        </span>
+                        <h5 class="sw-name mt-1">${escapeHTML(sw.name)}</h5>
+                        <div class="sw-ip"><i class="fa-solid fa-globe me-1"></i>${sw.ip}</div>
+                        <div class="sw-model">${escapeHTML(sw.model || 'Unknown')}</div>
+                    </div>
+                </div>
+
+                <div class="sw-meta">
+                    <i class="fa-solid fa-clock me-1"></i>
+                    ${sw.last_scan_time ? escapeHTML(sw.last_scan_time) : 'Never scanned'}
+                </div>
+
+                ${scanning || queued ? `
+                    <div class="sw-progress">
+                        <div class="sw-progress-bar" style="width:${queued ? 0 : progress}%"></div>
+                    </div>
+                    <div style="font-size:10px; color:var(--primary); margin-top:4px;">
+                        ${queued ? 'In queue...' : `Scanning — ${progress}%`}
+                    </div>
+                ` : ''}
+
+                <div class="sw-actions">
+                    <a href="${SWITCH_DETAIL_URL(sw.id)}" class="sw-btn">
+                        <i class="fa-solid fa-gauge-high me-1"></i>Open
+                    </a>
+                    <button class="sw-btn ${scanning || queued ? 'scanning' : ''}"
+                            onclick="scanOne(${sw.id})" title="Scan this switch">
+                        <i class="fa-solid fa-satellite-dish"></i>
+                    </button>
+                    <button class="sw-btn-del" onclick="deleteOne(${sw.id}, '${escapeAttr(sw.name)}')" title="Delete">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderPagination() {
+    const el = document.getElementById('pagination');
+    if (state.pages <= 1) { el.innerHTML = ''; return; }
+
+    let html = `<button class="page-btn" ${state.page <= 1 ? 'disabled' : ''}
+                 onclick="gotoPage(${state.page - 1})">
+                 <i class="fa-solid fa-chevron-left"></i></button>`;
+
+    // Show up to 7 page buttons with ellipsis
+    const pages = [];
+    const cur = state.page, max = state.pages;
+    if (max <= 7) { for (let i = 1; i <= max; i++) pages.push(i); }
+    else {
+        pages.push(1);
+        if (cur > 3) pages.push('...');
+        for (let i = Math.max(2, cur - 1); i <= Math.min(max - 1, cur + 1); i++) pages.push(i);
+        if (cur < max - 2) pages.push('...');
+        pages.push(max);
+    }
+
+    pages.forEach(p => {
+        if (p === '...') html += `<span style="color:var(--muted); padding:0 6px;">…</span>`;
+        else html += `<button class="page-btn ${p === state.page ? 'active' : ''}"
+                        onclick="gotoPage(${p})">${p}</button>`;
+    });
+
+    html += `<button class="page-btn" ${state.page >= state.pages ? 'disabled' : ''}
+              onclick="gotoPage(${state.page + 1})">
+              <i class="fa-solid fa-chevron-right"></i></button>`;
+
+    el.innerHTML = html;
+}
+
+function updateBulkBar() {
+    const bar = document.getElementById('bulkBar');
+    const cnt = state.selected.size;
+    if (cnt > 0) {
+        bar.style.display = 'block';
+        document.getElementById('bulkCount').textContent = cnt;
+    } else {
+        bar.style.display = 'none';
+    }
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+async function scanOne(swId) {
+    showToast('Scan queued...', 'info');
+    await fetch(`/api/scan/${swId}`, { method: 'POST' });
+    startQueuePoll();
+}
+
+async function scanSelected() {
+    const ids = [...state.selected];
+    if (!ids.length) return;
+    const r = await fetch('/api/scan-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+    });
+    const data = await r.json();
+    showToast(`${data.queued} of ${data.total} scans queued`, 'success');
+    clearSelection();
+    startQueuePoll();
+}
+
+async function scanAll() {
+    if (!confirm('Queue ALL switches for scanning?')) return;
+    showToast('Queueing all switches...', 'info');
+    const r = await fetch('/api/scan-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ all: true })
+    });
+    const data = await r.json();
+    showToast(`${data.queued} scans queued (${data.total} total)`, 'success');
+    startQueuePoll();
+}
+
+async function deleteOne(swId, name) {
+    if (!confirm(`Delete switch "${name}"?`)) return;
+    window.location.href = `/delete/${swId}`;
+}
+
+async function deleteSelected() {
+    const ids = [...state.selected];
+    if (!ids.length) return;
+    if (!confirm(`Delete ${ids.length} switch(es)?`)) return;
+
+    const r = await fetch('/api/delete-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+    });
+    const data = await r.json();
+    showToast(`${data.deleted} deleted`, 'success');
+    clearSelection();
+    await refresh();
+}
+
+function toggleSelect(swId, checked) {
+    if (checked) state.selected.add(swId);
+    else state.selected.delete(swId);
+    // update card class
+    document.querySelectorAll('.sw-card').forEach(card => {
+        const cb = card.querySelector('.sw-check');
+        if (cb && cb.getAttribute('onchange').includes(`(${swId},`)) {
+            card.classList.toggle('selected', checked);
+        }
+    });
+    updateBulkBar();
+}
+
+function clearSelection() {
+    state.selected.clear();
+    document.querySelectorAll('.sw-check').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.sw-card').forEach(c => c.classList.remove('selected'));
+    updateBulkBar();
+}
+
+function gotoPage(p) {
+    state.page = p;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    fetchSwitches();
+}
+
+async function refresh() {
+    await Promise.all([fetchSwitches(), fetchStats()]);
+}
+
+// ============================================================
+// QUEUE POLLING
+// ============================================================
+function startQueuePoll() {
+    if (state.queuePollTimer) return;
+    state.queuePollTimer = setInterval(pollQueue, 1500);
+    pollQueue();
+}
+
+async function pollQueue() {
+    try {
+        const r = await fetch('/api/queue-status');
+        const q = await r.json();
+
+        const banner = document.getElementById('queueBanner');
+        const totalActive = q.active_count + q.queued_count;
+
+        if (totalActive === 0) {
+            banner.style.display = 'none';
+            if (state.queuePollTimer) {
+                clearInterval(state.queuePollTimer);
+                state.queuePollTimer = null;
+                // final refresh
+                await refresh();
+            }
+            return;
+        }
+
+        banner.style.display = 'block';
+        document.getElementById('queueCounts').textContent =
+            `${q.active_count} active · ${q.queued_count} queued`;
+
+        // Average progress of active
+        let avg = 0;
+        if (q.active.length) {
+            avg = Math.round(q.active.reduce((a, b) => a + (b.progress || 0), 0) / q.active.length);
+            const names = q.active.slice(0, 2).map(a => a.message).filter(Boolean);
+            document.getElementById('queueText').textContent =
+                `Scanning ${q.active_count} switch${q.active_count > 1 ? 'es' : ''} — ${names[0] || ''}`;
+        } else {
+            document.getElementById('queueText').textContent = 'Preparing...';
+        }
+        document.getElementById('queueBar').style.width = avg + '%';
+
+        // Also refresh visible cards every ~3rd poll
+        if (Date.now() % 3 === 0) {
+            await fetchSwitches();
+            await fetchStats();
+        }
+    } catch (e) { /* ignore */ }
+}
+
+// ============================================================
+// UTIL
+// ============================================================
+function escapeHTML(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, m =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+function escapeAttr(s) { return escapeHTML(s).replace(/'/g, "\\'"); }
+
+function showToast(msg, type = 'info') {
+    const container = document.querySelector('.flash-container') || (() => {
+        const d = document.createElement('div');
+        d.className = 'flash-container';
+        document.body.appendChild(d);
+        return d;
+    })();
+    const icons = { success: 'fa-circle-check', danger: 'fa-circle-xmark', info: 'fa-info-circle' };
+    const t = document.createElement('div');
+    t.className = `flash-msg ${type}`;
+    t.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i><span>${escapeHTML(msg)}</span>`;
+    container.appendChild(t);
+    setTimeout(() => {
+        t.style.animation = 'slideInRight 0.4s reverse';
+        setTimeout(() => t.remove(), 400);
+    }, 3500);
+}
+
+// ============================================================
+// EVENTS
+// ============================================================
+let searchDebounce = null;
+document.getElementById('searchInput').addEventListener('input', e => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+        state.q = e.target.value.trim();
+        state.page = 1;
+        fetchSwitches();
+    }, 300);
+});
+
+document.getElementById('filterModel').addEventListener('change', e => {
+    state.model = e.target.value;
+    state.page = 1;
+    fetchSwitches();
+});
+
+document.getElementById('filterStatus').addEventListener('change', e => {
+    state.status = e.target.value;
+    state.page = 1;
+    fetchSwitches();
+    fetchStats();
+});
+
+document.getElementById('sortBy').addEventListener('change', e => {
+    state.sort = e.target.value;
+    state.page = 1;
+    fetchSwitches();
+});
+
+document.querySelectorAll('.stat-tile').forEach(el => {
+    el.addEventListener('click', () => {
+        const s = el.dataset.filterStatus;
+        state.status = (s === state.status) ? '' : s;
+        document.getElementById('filterStatus').value = state.status;
+        state.page = 1;
+        fetchSwitches();
+        fetchStats();
+    });
+});
+
+// ============================================================
+// INIT
+// ============================================================
+(async function init() {
+    await refresh();
+    // If any scan is running globally, start polling
+    try {
+        const r = await fetch('/api/queue-status');
+        const q = await r.json();
+        if (q.active_count + q.queued_count > 0) startQueuePoll();
+    } catch (e) {}
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,809 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex" style="min-height: calc(100vh - 70px);">
+
+    <!-- Sidebar -->
+    <aside class="cyber-sidebar">
+        <div class="sw-header">
+            <div class="live-indicator"></div>
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:2px;">Managing</div>
+            <div style="font-size:18px; font-weight:700; margin-top:4px;">{{ sw.name }}</div>
+            <div class="mono" style="color:var(--primary); font-size:13px;">{{ sw.ip }}</div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">NETWORK OVERVIEW</div>
+            <a href="#" class="nav-link active" data-section="overview">
+                <i class="fa-solid fa-gauge-high"></i>Overview
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">VLANs & IPs</div>
+            <a href="#" class="nav-link" data-section="vlans">
+                <i class="fa-solid fa-layer-group"></i>VLANs
+            </a>
+            <a href="#" class="nav-link" data-section="vlan_ips">
+                <i class="fa-solid fa-network-wired"></i>VLAN IPs
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">PORT MANAGEMENT</div>
+            <a href="#" class="nav-link" data-section="interfaces">
+                <i class="fa-solid fa-ethernet"></i>Interface Mode
+            </a>
+            <a href="#" class="nav-link" data-section="interface_usage">
+                <i class="fa-solid fa-chart-pie"></i>Used/Unused Ports
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">DISCOVERY</div>
+            <a href="#" class="nav-link" data-section="cdp">
+                <i class="fa-solid fa-diagram-project"></i>CDP Neighbors
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">SECURITY & LOGS</div>
+            <a href="#" class="nav-link" data-section="radius">
+                <i class="fa-solid fa-shield-halved"></i>RADIUS
+            </a>
+            <a href="#" class="nav-link" data-section="snmp">
+                <i class="fa-solid fa-satellite-dish"></i>SNMP
+            </a>
+            <a href="#" class="nav-link" data-section="logging">
+                <i class="fa-solid fa-file-lines"></i>Log/Syslog
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">RAW DATA</div>
+            <a href="#" class="nav-link" data-section="raw_config">
+                <i class="fa-solid fa-file-code"></i>Running Config
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="cyber-main">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="mb-1">{{ sw.name }} 
+                    <span class="model-badge ms-2">{{ sw.model }}</span>
+                </h3>
+                <div style="color:var(--muted); font-size:14px;">
+                    <i class="fa-solid fa-globe me-1"></i>{{ sw.ip }} • 
+                    <i class="fa-solid fa-clock me-1 ms-2"></i>Real-time Data
+                </div>
+            </div>
+            <button onclick="startScan()" id="scanBtn" class="btn-scan-cta">
+                <i class="fa-solid fa-satellite-dish"></i>
+                <span>Scan Switch Now</span>
+                <div class="scan-wave"></div>
+            </button>
+        </div>
+
+        <!-- Live Scan Progress (new) -->
+        <div id="scanProgress" class="scan-loader-container" style="display:none;">
+            <div class="scan-animation">
+                <div class="scan-line"></div>
+                <div class="scan-icon">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                </div>
+            </div>
+            <h5 class="mt-3 text-primary-glow" id="scanTitle">Scanning Network Device</h5>
+            <p style="color:var(--muted); margin-bottom:15px;">
+                <span id="scanMsg">Starting...</span>
+                <span class="mono text-primary-glow ms-2" id="scanPct">0%</span>
+            </p>
+            <div class="live-progress">
+                <div class="live-progress-bar" id="scanBar" style="width:0%"></div>
+            </div>
+        </div>
+
+        <!-- Content Loader -->
+        <div id="loader" style="display:none;" class="text-center py-5">
+            <div class="pulse-loader"></div>
+            <p style="color:var(--muted); margin-top:15px;">Loading data...</p>
+        </div>
+
+        <!-- Content -->
+        <div id="content"></div>
+    </main>
+</div>
+
+<style>
+.cyber-sidebar {
+    width: 260px;
+    background: rgba(19, 24, 54, 0.6);
+    backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(0,212,255,0.15);
+    padding: 25px 0;
+    overflow-y: auto;
+    height: calc(100vh - 70px);
+    position: sticky;
+    top: 70px;
+}
+
+.sw-header {
+    padding: 0 25px 25px;
+    border-bottom: 1px solid rgba(0,212,255,0.15);
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.live-indicator {
+    position: absolute;
+    top: 0; right: 25px;
+    width: 8px; height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--success);
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.nav-section { margin-bottom: 25px; }
+
+.nav-label {
+    padding: 0 25px 8px;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 700;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 25px;
+    color: var(--light);
+    text-decoration: none;
+    font-size: 14px;
+    border-left: 3px solid transparent;
+    transition: all 0.3s;
+}
+
+.nav-link i {
+    font-size: 15px;
+    width: 20px;
+    text-align: center;
+    color: var(--muted);
+}
+
+.nav-link:hover {
+    background: rgba(0,212,255,0.05);
+    color: var(--primary);
+    border-left-color: rgba(0,212,255,0.3);
+}
+
+.nav-link:hover i { color: var(--primary); }
+
+.nav-link.active {
+    background: linear-gradient(90deg, rgba(0,212,255,0.15), transparent);
+    color: var(--primary);
+    border-left-color: var(--primary);
+    box-shadow: inset 0 0 20px rgba(0,212,255,0.1);
+}
+
+.nav-link.active i { color: var(--primary); }
+
+.cyber-main {
+    flex: 1;
+    padding: 30px 40px;
+    overflow-x: auto;
+}
+
+.btn-scan-cta {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,212,255,0.4);
+    transition: all 0.3s;
+}
+
+.btn-scan-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(0,212,255,0.6);
+}
+
+.btn-scan-cta:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.scan-wave {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+}
+
+.btn-scan-cta:active .scan-wave {
+    animation: waveExpand 0.6s ease-out;
+}
+
+@keyframes waveExpand {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+}
+
+/* Scan Animation Container */
+.scan-loader-container {
+    text-align: center;
+    padding: 40px 20px;
+    background: rgba(26, 31, 58, 0.6);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 16px;
+    margin-bottom: 25px;
+}
+
+.scan-animation {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto;
+    border: 2px solid rgba(0,212,255,0.2);
+    border-radius: 50%;
+}
+
+.scan-animation::before,
+.scan-animation::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--primary);
+    border-radius: 50%;
+    animation: scanRing 2s ease-out infinite;
+    opacity: 0;
+}
+
+.scan-animation::after { animation-delay: 1s; }
+
+@keyframes scanRing {
+    0% { transform: scale(0.5); opacity: 1; }
+    100% { transform: scale(1.8); opacity: 0; }
+}
+
+.scan-line {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 50%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary));
+    transform-origin: left center;
+    animation: scanRotate 2s linear infinite;
+    box-shadow: 0 0 10px var(--primary);
+}
+
+@keyframes scanRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.scan-icon {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 34px;
+    color: var(--primary);
+    filter: drop-shadow(0 0 15px var(--primary));
+}
+
+/* Live progress bar driven by server */
+.live-progress {
+    max-width: 420px;
+    margin: 15px auto 0;
+    height: 8px;
+    background: rgba(0,212,255,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.live-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    box-shadow: 0 0 12px var(--primary);
+    transition: width 0.4s ease;
+    border-radius: 4px;
+}
+
+.pulse-loader {
+    width: 60px;
+    height: 60px;
+    border: 3px solid rgba(0,212,255,0.2);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    margin: 0 auto;
+    animation: spin 1s linear infinite;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Stats Card */
+.stat-card {
+    background: rgba(26, 31, 58, 0.6);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: var(--primary);
+}
+
+.stat-card:hover {
+    border-color: rgba(0,212,255,0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,212,255,0.15);
+}
+
+.stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    margin-top: 5px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Cyber Table */
+.cyber-table {
+    width: 100%;
+    background: rgba(26, 31, 58, 0.4);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(0,212,255,0.15);
+}
+
+.cyber-table thead {
+    background: rgba(0,212,255,0.08);
+}
+
+.cyber-table thead th {
+    color: var(--primary);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    padding: 15px;
+    border-bottom: 1px solid rgba(0,212,255,0.2);
+}
+
+.cyber-table tbody td {
+    padding: 12px 15px;
+    color: var(--light);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 13px;
+}
+
+.cyber-table tbody tr:hover {
+    background: rgba(0,212,255,0.05);
+}
+
+.cyber-table tbody tr:last-child td { border-bottom: none; }
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.pill-up {
+    background: rgba(0,245,160,0.15);
+    color: var(--success);
+    border: 1px solid rgba(0,245,160,0.3);
+}
+
+.pill-down {
+    background: rgba(100,116,139,0.15);
+    color: var(--muted);
+    border: 1px solid rgba(100,116,139,0.3);
+}
+
+.pill-shut {
+    background: rgba(255,56,96,0.15);
+    color: var(--danger);
+    border: 1px solid rgba(255,56,96,0.3);
+}
+
+.pill-access {
+    background: rgba(0,212,255,0.15);
+    color: var(--primary);
+    border: 1px solid rgba(0,212,255,0.3);
+}
+
+.pill-trunk {
+    background: rgba(255,0,110,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(255,0,110,0.3);
+}
+
+.dot { display:inline-block; width:8px; height:8px; border-radius:50%; }
+
+/* Config Viewer */
+.config-viewer {
+    background: rgba(10, 14, 39, 0.9);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 12px;
+    padding: 25px;
+    color: #7dd3fc;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    max-height: 650px;
+    overflow: auto;
+    white-space: pre-wrap;
+    line-height: 1.7;
+    box-shadow: inset 0 0 40px rgba(0,212,255,0.05);
+}
+
+.model-badge {
+    background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(0,212,255,0.3));
+    color: var(--primary);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 1px solid rgba(0,212,255,0.3);
+    vertical-align: middle;
+}
+
+.last-scan {
+    text-align: right;
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 15px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.section-title {
+    color: var(--primary);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 700;
+    margin: 20px 0 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid rgba(0,212,255,0.2);
+}
+
+.spinning { animation: spin 1s linear infinite; display: inline-block; }
+</style>
+
+<script>
+const SW_ID = {{ sw.id }};
+let currentSection = 'overview';
+let pollTimer = null;
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+document.querySelectorAll('.nav-link').forEach(item => {
+    item.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
+        item.classList.add('active');
+        currentSection = item.dataset.section;
+        loadSection(currentSection);
+    });
+});
+
+// ============================================================
+// SCAN — background job based
+// ============================================================
+function setScanProgress(pct, msg) {
+    document.getElementById('scanBar').style.width = pct + '%';
+    document.getElementById('scanPct').textContent = pct + '%';
+    if (msg) document.getElementById('scanMsg').textContent = msg;
+}
+
+function showScanPanel() {
+    document.getElementById('scanProgress').style.display = 'block';
+    document.getElementById('content').innerHTML = '';
+}
+
+function hideScanPanel(delay) {
+    setTimeout(() => {
+        document.getElementById('scanProgress').style.display = 'none';
+        document.getElementById('scanBar').style.width = '0%';
+    }, delay || 0);
+}
+
+function resetScanButton() {
+    const btn = document.getElementById('scanBtn');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-satellite-dish"></i><span>Scan Switch Now</span><div class="scan-wave"></div>';
+}
+
+function setScanningButton() {
+    const btn = document.getElementById('scanBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch spinning"></i><span>Scanning...</span><div class="scan-wave"></div>';
+}
+
+async function startScan() {
+    setScanningButton();
+    showScanPanel();
+    setScanProgress(0, 'Starting...');
+
+    try {
+        const res = await fetch(`/api/scan/${SW_ID}`, { method: 'POST' });
+        const r = await res.json();
+
+        if (r.status === 'error') {
+            showToast(r.message || 'Scan failed to start', 'danger');
+            resetScanButton();
+            hideScanPanel(0);
+            return;
+        }
+        if (r.status === 'already_running') {
+            showToast('Scan already running...', 'info');
+        }
+
+        pollScanStatus();
+    } catch (e) {
+        showToast('Network error: ' + e.message, 'danger');
+        resetScanButton();
+        hideScanPanel(0);
+    }
+}
+
+function pollScanStatus() {
+    clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/scan/${SW_ID}/status`);
+            const job = await res.json();
+
+            if (job.status === 'idle') return;
+
+            setScanProgress(job.progress || 0, job.message || 'Working...');
+
+            if (job.status === 'done') {
+                clearInterval(pollTimer);
+                setScanProgress(100, 'Scan completed!');
+                showToast('✓ Scan completed successfully!', 'success');
+                resetScanButton();
+                hideScanPanel(1200);
+                // Reload current section
+                loadSection(currentSection);
+            } else if (job.status === 'error') {
+                clearInterval(pollTimer);
+                showToast('✗ ' + (job.message || 'Scan failed'), 'danger');
+                resetScanButton();
+                hideScanPanel(1200);
+            }
+        } catch (e) {
+            console.error('Poll error:', e);
+        }
+    }, 800);
+}
+
+// ============================================================
+// LOAD SECTION
+// ============================================================
+async function loadSection(section) {
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('content').innerHTML = '';
+
+    try {
+        const res = await fetch(`/api/data/${SW_ID}/${section}`);
+        const r = await res.json();
+        document.getElementById('loader').style.display = 'none';
+
+        if (r.status === 'empty') {
+            document.getElementById('content').innerHTML = `
+                <div class="text-center py-5" style="background:rgba(26,31,58,0.4); border-radius:12px; border:1px dashed rgba(0,212,255,0.3);">
+                    <div style="font-size:60px; color:var(--muted); opacity:0.3;"><i class="fa-solid fa-satellite-dish"></i></div>
+                    <h5 class="mt-3 text-primary-glow">No Data Available</h5>
+                    <p style="color:var(--muted);">Click <b>"Scan Switch Now"</b> to fetch live data from device</p>
+                </div>`;
+            return;
+        }
+        renderSection(section, r.data);
+    } catch (e) {
+        document.getElementById('loader').style.display = 'none';
+        showToast('Failed to load data: ' + e.message, 'danger');
+    }
+}
+
+// ============================================================
+// RENDER SECTIONS
+// ============================================================
+function renderSection(section, data) {
+    const p = data.parsed;
+    let html = `<div class="last-scan"><i class="fa-solid fa-clock me-1"></i>Last Scanned: ${data.scanned_at}</div>`;
+
+    if (section === 'overview') {
+        html += `<div class="row g-3">
+            <div class="col-md-4"><div class="stat-card"><div class="stat-label">Hostname</div><div class="stat-value text-primary-glow">${p.hostname}</div></div></div>
+            <div class="col-md-4"><div class="stat-card"><div class="stat-label">Gateway</div><div class="stat-value text-success-glow">${p.gateway}</div></div></div>
+            <div class="col-md-4"><div class="stat-card"><div class="stat-label">Model</div><div class="stat-value" style="font-size:16px;">${p.model || 'N/A'}</div></div></div>
+            <div class="col-md-6"><div class="stat-card"><div class="stat-label">Software Version</div><div class="stat-value" style="font-size:16px; color:var(--warning);">${p.version}</div></div></div>
+            <div class="col-md-6"><div class="stat-card"><div class="stat-label">System Uptime</div><div class="stat-value" style="font-size:14px;">${p.uptime}</div></div></div>
+        </div>`;
+    }
+    else if (section === 'vlans') {
+        html += `<h4 class="section-title">VLAN Database</h4>`;
+        html += tableHTML(['VLAN ID', 'Name', 'Ports', 'Status'], p.map(v => [
+            `<span class="mono text-primary-glow">${v.id}</span>`,
+            `<b>${v.name}</b>`,
+            `<small class="mono">${v.ports}</small>`,
+            `<span class="status-pill pill-up">${v.status}</span>`
+        ]));
+    }
+    else if (section === 'vlan_ips') {
+        html += `<h4 class="section-title">Management IP Addresses</h4>`;
+        html += tableHTML(['VLAN', 'IP Address', 'Subnet Mask'], p.map(v => [
+            `<span class="status-pill pill-access">VLAN ${v.vlan}</span>`,
+            `<span class="mono text-primary-glow" style="font-size:14px;">${v.ip}</span>`,
+            `<span class="mono">${v.mask}</span>`
+        ]));
+    }
+    else if (section === 'interfaces') {
+        html += `<h4 class="section-title">Interface Configuration</h4>`;
+        html += tableHTML(['Port', 'Description', 'Mode', 'VLANs', 'PortFast', 'Status'], p.map(i => {
+            let statusBadge = i.status === 'Up' ? '<span class="status-pill pill-up"><span class="dot" style="background:var(--success);box-shadow:0 0 6px var(--success);"></span>Up</span>' :
+                              i.status === 'Admin Down' ? '<span class="status-pill pill-shut"><span class="dot" style="background:var(--danger);"></span>Admin Shut</span>' :
+                              '<span class="status-pill pill-down"><span class="dot" style="background:var(--muted);"></span>Down</span>';
+            let modeBadge = i.mode === 'Trunk' ? '<span class="status-pill pill-trunk">TRUNK</span>' : '<span class="status-pill pill-access">ACCESS</span>';
+            return [`<span class="mono text-primary-glow">${i.port}</span>`, i.description, modeBadge, `<b class="mono">${i.vlans}</b>`, i.portfast, statusBadge];
+        }));
+    }
+    else if (section === 'interface_usage') {
+        html += `<div class="row g-3 mb-4">
+            <div class="col-md-4"><div class="stat-card" style="border-left-color:var(--success);"><div class="stat-label">Used Ports</div><div class="stat-value text-success-glow" style="font-size:36px;">${p.used.length}</div></div></div>
+            <div class="col-md-4"><div class="stat-card" style="border-left-color:var(--muted);"><div class="stat-label">Unused Ports</div><div class="stat-value" style="font-size:36px; color:var(--muted);">${p.unused.length}</div></div></div>
+            <div class="col-md-4"><div class="stat-card" style="border-left-color:var(--primary);"><div class="stat-label">Total Ports</div><div class="stat-value text-primary-glow" style="font-size:36px;">${p.total}</div></div></div>
+        </div>`;
+        html += `<h4 class="section-title" style="color:var(--success);">🟢 Active/Used Ports</h4>`;
+        html += tableHTML(['Port', 'Name', 'Status', 'VLAN'], p.used.map(i => [`<span class="mono text-primary-glow">${i.port}</span>`, i.name, `<span class="status-pill pill-up">${i.status}</span>`, i.vlan]));
+        html += `<h4 class="section-title" style="color:var(--muted); margin-top:30px;">⚪ Inactive/Unused Ports</h4>`;
+        html += tableHTML(['Port', 'Name', 'Status', 'VLAN'], p.unused.map(i => [`<span class="mono">${i.port}</span>`, i.name, `<span class="status-pill pill-down">${i.status}</span>`, i.vlan]));
+    }
+    else if (section === 'cdp') {
+        html += `<h4 class="section-title">Connected Network Devices</h4>`;
+        html += tableHTML(['Local Port', 'Device Name', 'Platform', 'Capability', 'Remote Port', 'IP Address'], p.map(c => [
+            `<span class="mono text-primary-glow">${c.local_port}</span>`,
+            `<b>${c.device}</b>`, c.platform,
+            `<span class="status-pill pill-access">${c.capability}</span>`,
+            `<span class="mono">${c.remote_port}</span>`,
+            `<span class="mono text-success-glow">${c.ip}</span>`
+        ]));
+    }
+    else if (section === 'radius') {
+        html += `<h4 class="section-title">RADIUS Authentication Servers</h4>`;
+        html += tableHTML(['Server IP', 'Encryption Key'], p.map(r => [
+            `<span class="mono text-primary-glow" style="font-size:14px;">${r.ip}</span>`,
+            `<span class="status-pill pill-up">${r.key}</span>`
+        ]));
+    }
+    else if (section === 'snmp') {
+        html += `<h4 class="section-title">SNMP Communities</h4>`;
+        html += tableHTML(['Community', 'Access', 'View'], p.communities.map(c => [`<span class="mono">${c.community}</span>`, `<span class="status-pill pill-access">${c.access}</span>`, c.view]));
+        html += `<h4 class="section-title" style="margin-top:30px;">SNMP Trap Hosts</h4>`;
+        html += tableHTML(['Host IP', 'Type', 'Version'], p.hosts.map(h => [`<span class="mono text-primary-glow">${h.ip}</span>`, h.type, `<span class="status-pill pill-trunk">${h.version}</span>`]));
+    }
+    else if (section === 'logging') {
+        html += `<div class="row g-3 mb-4">
+            <div class="col-md-4"><div class="stat-card"><div class="stat-label">Console Logging</div><div class="stat-value" style="font-size:20px; color:${p.console === 'Enabled' ? 'var(--success)' : 'var(--danger)'};">${p.console}</div></div></div>
+            <div class="col-md-4"><div class="stat-card"><div class="stat-label">File Logging</div><div class="stat-value" style="font-size:20px;">${p.file}</div></div></div>
+            <div class="col-md-4"><div class="stat-card"><div class="stat-label">Buffered Level</div><div class="stat-value" style="font-size:20px; color:var(--warning);">${p.buffered}</div></div></div>
+        </div>`;
+        html += `<h4 class="section-title">Syslog Servers</h4>`;
+        html += tableHTML(['Server IP'], p.servers.map(s => [`<span class="mono text-primary-glow" style="font-size:14px;">${s.ip}</span>`]));
+        html += `<h4 class="section-title" style="margin-top: 30px;">
+                    <i class="fa-solid fa-terminal me-2"></i>Recent Device Logs (Buffer)
+                 </h4>`;
+        html += `<div class="config-viewer" style="max-height: 400px; border-color: rgba(255, 0, 110, 0.3); box-shadow: inset 0 0 40px rgba(255,0,110,0.05); color: #e2e8f0;">
+                    ${escapeHTML(p.recent_logs)}
+                 </div>`;
+    }
+    else if (section === 'raw_config') {
+        html += `<h4 class="section-title">Complete Running Configuration</h4>`;
+        html += `<div class="config-viewer">${escapeHTML(p.config)}</div>`;
+    }
+
+    document.getElementById('content').innerHTML = html;
+}
+
+function tableHTML(headers, rows) {
+    if (!rows || rows.length === 0) return '<div class="alert" style="background:rgba(0,212,255,0.05); border:1px solid rgba(0,212,255,0.2); color:var(--light);">No data available in this section.</div>';
+    let h = `<table class="cyber-table"><thead><tr>`;
+    headers.forEach(x => h += `<th>${x}</th>`);
+    h += `</tr></thead><tbody>`;
+    rows.forEach(r => { h += `<tr>`; r.forEach(c => h += `<td>${c}</td>`); h += `</tr>`; });
+    h += `</tbody></table>`;
+    return h;
+}
+
+function escapeHTML(s) {
+    if (!s) return '';
+    return String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function showToast(msg, type) {
+    const container = document.querySelector('.flash-container') || (() => {
+        const d = document.createElement('div');
+        d.className = 'flash-container';
+        document.body.appendChild(d);
+        return d;
+    })();
+    const toast = document.createElement('div');
+    toast.className = `flash-msg ${type}`;
+    toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check text-success-glow' : 'fa-circle-xmark text-danger-glow'}"></i><span>${msg}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'slideInRight 0.4s reverse';
+        setTimeout(() => toast.remove(), 400);
+    }, 4000);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+loadSection('overview');
+
+// On page load — check if a scan is already running for this switch
+window.addEventListener('load', async () => {
+    try {
+        const res = await fetch(`/api/scan/${SW_ID}/status`);
+        const job = await res.json();
+        if (job.status === 'running') {
+            setScanningButton();
+            showScanPanel();
+            setScanProgress(job.progress || 0, job.message || 'Working...');
+            pollScanStatus();
+        }
+    } catch (e) {}
+});
+</script>
+{% endblock %}
