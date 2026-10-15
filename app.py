@@ -5,6 +5,12 @@ import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+import sqlite3
+import json
+import os
+from datetime import datetime
+
+DB_FILE = os.environ.get("DB_FILE", "switches.db")
 
 from snmp_poller import monitor
 from database import (init_db, add_switch, get_all_switches, get_switch,
@@ -673,7 +679,7 @@ def debug_raw(sw_id, section):
 
 
 if __name__ == '__main__':
-    print("\n🚀 Cisco Manager — http://127.0.0.1:5000\n")
+    print("\n🚀 Cisco Manager — http://0.0.0.0:5000\n")
     print(f"   Max concurrent scans: {MAX_CONCURRENT}")
     print(f"   SNMP monitor: {monitor.status()}\n")
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
