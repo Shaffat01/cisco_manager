@@ -1,0 +1,25 @@
+services:
+  netscan:
+    build: .
+    image: netscan-pro:latest
+    container_name: netscan
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - netscan_data:/app/data
+    environment:
+      - DB_FILE=/app/data/switches.db
+      - TZ=Asia/Dhaka
+    # SNMP outbound uses UDP 161 (no mapping needed)
+    # SSH outbound uses TCP 22 (no mapping needed)
+    networks:
+      - netscan_net
+
+networks:
+  netscan_net:
+    driver: bridge
+
+volumes:
+  netscan_data:
+    driver: local
