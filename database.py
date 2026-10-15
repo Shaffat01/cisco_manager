@@ -38,14 +38,26 @@ def init_db():
         try:
             c.execute(f'ALTER TABLE switches ADD COLUMN {col} {spec}')
         except sqlite3.OperationalError:
-            pass  # already exists
+            pass
 
-    # ---- Indexes for 200+ switches ----
+    # ---- Traffic history table ----
+    c.execute('''CREATE TABLE IF NOT EXISTS traffic_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        switch_id INTEGER,
+        port TEXT,
+        in_bps INTEGER,
+        out_bps INTEGER,
+        ts INTEGER
+    )''')
+
+    # ---- Indexes ----
     c.execute('CREATE INDEX IF NOT EXISTS idx_switches_name    ON switches(name)')
     c.execute('CREATE INDEX IF NOT EXISTS idx_switches_ip      ON switches(ip)')
     c.execute('CREATE INDEX IF NOT EXISTS idx_switches_model   ON switches(model)')
     c.execute('CREATE INDEX IF NOT EXISTS idx_switches_status  ON switches(last_status)')
     c.execute('CREATE INDEX IF NOT EXISTS idx_scan_sw_section  ON scan_data(switch_id, section)')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_th_sw_port_ts    ON traffic_history(switch_id, port, ts)')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_th_ts            ON traffic_history(ts)')
 
     conn.commit()
     conn.close()
@@ -54,7 +66,7 @@ def init_db():
 def get_conn():
     conn = sqlite3.connect(DB_FILE, timeout=30)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")   # better concurrency
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
     return conn
 
@@ -84,9 +96,6 @@ def get_all_switches():
 
 def search_switches(query="", model="", status="", sort="id", order="desc",
                     page=1, per_page=24):
-    """
-    Returns (rows, total_count) with search + filter + sort + pagination.
-    """
     sort_cols = {
         "id": "id", "name": "name", "ip": "ip",
         "model": "model", "status": "last_status",
@@ -143,6 +152,7 @@ def get_switches_by_ids(ids):
 def delete_switch(sw_id):
     conn = get_conn()
     conn.execute("DELETE FROM scan_data WHERE switch_id=?", (sw_id,))
+    conn.execute("DELETE FROM traffic_history WHERE switch_id=?", (sw_id,))
     conn.execute("DELETE FROM switches WHERE id=?", (sw_id,))
     conn.commit()
     conn.close()
@@ -154,6 +164,7 @@ def bulk_delete_switches(ids):
     conn = get_conn()
     placeholders = ",".join("?" * len(ids))
     conn.execute(f"DELETE FROM scan_data WHERE switch_id IN ({placeholders})", ids)
+    conn.execute(f"DELETE FROM traffic_history WHERE switch_id IN ({placeholders})", ids)
     deleted = conn.execute(f"DELETE FROM switches WHERE id IN ({placeholders})", ids).rowcount
     conn.commit()
     conn.close()
@@ -168,7 +179,6 @@ def update_model(sw_id, model):
 
 
 def update_switch_status(sw_id, status):
-    """status: 'online' | 'offline' | 'scanning' | 'unknown'"""
     conn = get_conn()
     conn.execute(
         "UPDATE switches SET last_status=?, last_scan_time=? WHERE id=?",
@@ -225,3 +235,91 @@ def get_scan(sw_id, section):
             "scanned_at": row["scanned_at"]
         }
     return None
+
+
+# ============================================================
+# TRAFFIC HISTORY
+# ============================================================
+def save_traffic_samples(samples):
+    """samples: list of (sw_id, port, in_bps, out_bps, ts)"""
+    if not samples:
+        return
+    conn = get_conn()
+    conn.executemany(
+        "INSERT INTO traffic_history (switch_id, port, in_bps, out_bps, ts) "
+        "VALUES (?, ?, ?, ?, ?)",
+        samples
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_traffic_history_bucketed(sw_id, port, since_ts, bucket_sec):
+    conn = get_conn()
+    rows = conn.execute(
+        """
+        SELECT (ts / ?) * ? AS bucket_ts,
+               AVG(in_bps)  AS in_bps,
+               AVG(out_bps) AS out_bps
+        FROM traffic_history
+        WHERE switch_id=? AND port=? AND ts>=?
+        GROUP BY bucket_ts
+        ORDER BY bucket_ts ASC
+        """,
+        (bucket_sec, bucket_sec, sw_id, port, since_ts)
+    ).fetchall()
+    conn.close()
+    return [{'ts': r['bucket_ts'], 'in_bps': int(r['in_bps'] or 0),
+             'out_bps': int(r['out_bps'] or 0)} for r in rows]
+
+
+def get_traffic_history_ports(sw_id, since_ts):
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT DISTINCT port FROM traffic_history WHERE switch_id=? AND ts>=? ORDER BY port",
+        (sw_id, since_ts)
+    ).fetchall()
+    conn.close()
+    return [r['port'] for r in rows]
+
+
+def prune_traffic_history(older_than_ts):
+    conn = get_conn()
+    n = conn.execute("DELETE FROM traffic_history WHERE ts < ?",
+                     (older_than_ts,)).rowcount
+    conn.commit()
+    conn.close()
+    return n
+
+
+def get_traffic_totals(sw_id, since_ts, sample_interval=60):
+    """
+    Sum bps samples × interval to get total bytes per port.
+    Returns: [{port, in_bytes, out_bytes, total_bytes, samples}, ...]
+    sorted by total_bytes DESC.
+    """
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT port,
+               SUM(in_bps)  AS sum_in,
+               SUM(out_bps) AS sum_out,
+               COUNT(*)     AS n
+        FROM traffic_history
+        WHERE switch_id=? AND ts>=?
+        GROUP BY port
+        ORDER BY (SUM(in_bps)+SUM(out_bps)) DESC
+    """, (sw_id, since_ts)).fetchall()
+    conn.close()
+
+    out = []
+    for r in rows:
+        in_bytes  = int((r['sum_in']  or 0) * sample_interval / 8)
+        out_bytes = int((r['sum_out'] or 0) * sample_interval / 8)
+        out.append({
+            'port':         r['port'],
+            'in_bytes':     in_bytes,
+            'out_bytes':    out_bytes,
+            'total_bytes':  in_bytes + out_bytes,
+            'samples':      r['n'],
+        })
+    return out

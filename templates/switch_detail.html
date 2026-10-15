@@ -19,6 +19,13 @@
         </div>
 
         <div class="nav-section">
+            <div class="nav-label">LIVE MONITORING</div>
+            <a href="#" class="nav-link" data-section="traffic">
+                <i class="fa-solid fa-chart-line"></i>Live Traffic
+            </a>
+        </div>
+
+        <div class="nav-section">
             <div class="nav-label">VLANs & IPs</div>
             <a href="#" class="nav-link" data-section="vlans">
                 <i class="fa-solid fa-layer-group"></i>VLANs
@@ -85,7 +92,6 @@
             </button>
         </div>
 
-        <!-- Live Scan Progress (new) -->
         <div id="scanProgress" class="scan-loader-container" style="display:none;">
             <div class="scan-animation">
                 <div class="scan-line"></div>
@@ -103,425 +109,243 @@
             </div>
         </div>
 
-        <!-- Content Loader -->
         <div id="loader" style="display:none;" class="text-center py-5">
             <div class="pulse-loader"></div>
             <p style="color:var(--muted); margin-top:15px;">Loading data...</p>
         </div>
 
-        <!-- Content -->
         <div id="content"></div>
     </main>
 </div>
 
 <style>
-.cyber-sidebar {
-    width: 260px;
-    background: rgba(19, 24, 54, 0.6);
-    backdrop-filter: blur(20px);
-    border-right: 1px solid rgba(0,212,255,0.15);
-    padding: 25px 0;
-    overflow-y: auto;
-    height: calc(100vh - 70px);
-    position: sticky;
-    top: 70px;
-}
-
-.sw-header {
-    padding: 0 25px 25px;
-    border-bottom: 1px solid rgba(0,212,255,0.15);
-    margin-bottom: 20px;
-    position: relative;
-}
-
-.live-indicator {
-    position: absolute;
-    top: 0; right: 25px;
-    width: 8px; height: 8px;
-    background: var(--success);
-    border-radius: 50%;
-    box-shadow: 0 0 10px var(--success);
-    animation: blink 2s infinite;
-}
-
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-}
-
+.cyber-sidebar { width: 260px; background: rgba(19,24,54,0.6); backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(0,212,255,0.15); padding: 25px 0; overflow-y: auto;
+    height: calc(100vh - 70px); position: sticky; top: 70px; }
+.sw-header { padding: 0 25px 25px; border-bottom: 1px solid rgba(0,212,255,0.15);
+    margin-bottom: 20px; position: relative; }
+.live-indicator { position: absolute; top: 0; right: 25px; width: 8px; height: 8px;
+    background: var(--success); border-radius: 50%; box-shadow: 0 0 10px var(--success);
+    animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
 .nav-section { margin-bottom: 25px; }
-
-.nav-label {
-    padding: 0 25px 8px;
-    font-size: 10px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    font-weight: 700;
-}
-
-.nav-link {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 11px 25px;
-    color: var(--light);
-    text-decoration: none;
-    font-size: 14px;
-    border-left: 3px solid transparent;
-    transition: all 0.3s;
-}
-
-.nav-link i {
-    font-size: 15px;
-    width: 20px;
-    text-align: center;
-    color: var(--muted);
-}
-
-.nav-link:hover {
-    background: rgba(0,212,255,0.05);
-    color: var(--primary);
-    border-left-color: rgba(0,212,255,0.3);
-}
-
+.nav-label { padding: 0 25px 8px; font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+.nav-link { display: flex; align-items: center; gap: 12px; padding: 11px 25px;
+    color: var(--light); text-decoration: none; font-size: 14px;
+    border-left: 3px solid transparent; transition: all 0.3s; }
+.nav-link i { font-size: 15px; width: 20px; text-align: center; color: var(--muted); }
+.nav-link:hover { background: rgba(0,212,255,0.05); color: var(--primary);
+    border-left-color: rgba(0,212,255,0.3); }
 .nav-link:hover i { color: var(--primary); }
-
-.nav-link.active {
-    background: linear-gradient(90deg, rgba(0,212,255,0.15), transparent);
-    color: var(--primary);
-    border-left-color: var(--primary);
-    box-shadow: inset 0 0 20px rgba(0,212,255,0.1);
-}
-
+.nav-link.active { background: linear-gradient(90deg, rgba(0,212,255,0.15), transparent);
+    color: var(--primary); border-left-color: var(--primary);
+    box-shadow: inset 0 0 20px rgba(0,212,255,0.1); }
 .nav-link.active i { color: var(--primary); }
-
-.cyber-main {
-    flex: 1;
-    padding: 30px 40px;
-    overflow-x: auto;
-}
-
-.btn-scan-cta {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    color: white;
-    border: none;
-    padding: 12px 25px;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 14px;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-    box-shadow: 0 4px 20px rgba(0,212,255,0.4);
-    transition: all 0.3s;
-}
-
-.btn-scan-cta:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 25px rgba(0,212,255,0.6);
-}
-
-.btn-scan-cta:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-.scan-wave {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 100%;
-    height: 100%;
-    background: rgba(255,255,255,0.3);
-    border-radius: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 0;
-}
-
-.btn-scan-cta:active .scan-wave {
-    animation: waveExpand 0.6s ease-out;
-}
-
-@keyframes waveExpand {
-    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
-}
-
-/* Scan Animation Container */
-.scan-loader-container {
-    text-align: center;
-    padding: 40px 20px;
-    background: rgba(26, 31, 58, 0.6);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(0,212,255,0.2);
-    border-radius: 16px;
-    margin-bottom: 25px;
-}
-
-.scan-animation {
-    position: relative;
-    width: 100px;
-    height: 100px;
-    margin: 0 auto;
-    border: 2px solid rgba(0,212,255,0.2);
-    border-radius: 50%;
-}
-
-.scan-animation::before,
-.scan-animation::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border: 2px solid var(--primary);
-    border-radius: 50%;
-    animation: scanRing 2s ease-out infinite;
-    opacity: 0;
-}
-
+.cyber-main { flex: 1; padding: 30px 40px; overflow-x: auto; }
+.btn-scan-cta { background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white; border: none; padding: 12px 25px; border-radius: 10px;
+    font-weight: 600; font-size: 14px; display: inline-flex; align-items: center;
+    gap: 10px; position: relative; overflow: hidden; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,212,255,0.4); transition: all 0.3s; }
+.btn-scan-cta:hover { transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(0,212,255,0.6); }
+.btn-scan-cta:disabled { opacity: 0.7; cursor: not-allowed; }
+.scan-wave { position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
+    background: rgba(255,255,255,0.3); border-radius: 50%;
+    transform: translate(-50%,-50%) scale(0); opacity: 0; }
+.btn-scan-cta:active .scan-wave { animation: waveExpand 0.6s ease-out; }
+@keyframes waveExpand { 0%{transform:translate(-50%,-50%) scale(0);opacity:1;}
+    100%{transform:translate(-50%,-50%) scale(3);opacity:0;} }
+.scan-loader-container { text-align: center; padding: 40px 20px;
+    background: rgba(26,31,58,0.6); backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,212,255,0.2); border-radius: 16px; margin-bottom: 25px; }
+.scan-animation { position: relative; width: 100px; height: 100px; margin: 0 auto;
+    border: 2px solid rgba(0,212,255,0.2); border-radius: 50%; }
+.scan-animation::before, .scan-animation::after { content:''; position:absolute; inset:0;
+    border: 2px solid var(--primary); border-radius:50%;
+    animation: scanRing 2s ease-out infinite; opacity: 0; }
 .scan-animation::after { animation-delay: 1s; }
-
-@keyframes scanRing {
-    0% { transform: scale(0.5); opacity: 1; }
-    100% { transform: scale(1.8); opacity: 0; }
-}
-
-.scan-line {
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 50%; height: 2px;
+@keyframes scanRing { 0%{transform:scale(0.5);opacity:1;} 100%{transform:scale(1.8);opacity:0;} }
+.scan-line { position: absolute; top: 50%; left: 50%; width: 50%; height: 2px;
     background: linear-gradient(90deg, transparent, var(--primary));
-    transform-origin: left center;
-    animation: scanRotate 2s linear infinite;
-    box-shadow: 0 0 10px var(--primary);
+    transform-origin: left center; animation: scanRotate 2s linear infinite;
+    box-shadow: 0 0 10px var(--primary); }
+@keyframes scanRotate { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+.scan-icon { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    font-size: 34px; color: var(--primary); filter: drop-shadow(0 0 15px var(--primary)); }
+.live-progress { max-width: 420px; margin: 15px auto 0; height: 8px;
+    background: rgba(0,212,255,0.1); border-radius: 4px; overflow: hidden; position: relative; }
+.live-progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary));
+    box-shadow: 0 0 12px var(--primary); transition: width 0.4s ease; border-radius: 4px; }
+.pulse-loader { width: 60px; height: 60px; border: 3px solid rgba(0,212,255,0.2);
+    border-top-color: var(--primary); border-radius: 50%; margin: 0 auto;
+    animation: spin 1s linear infinite; box-shadow: 0 0 20px rgba(0,212,255,0.3); }
+@keyframes spin { to{transform:rotate(360deg);} }
+.stat-card { background: rgba(26,31,58,0.6); backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,212,255,0.15); border-radius: 12px; padding: 20px;
+    transition: all 0.3s; position: relative; overflow: hidden; }
+.stat-card::before { content:''; position:absolute; top:0; left:0; width:4px; height:100%;
+    background: var(--primary); }
+.stat-card:hover { border-color: rgba(0,212,255,0.4); transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,212,255,0.15); }
+.stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 2px; font-weight: 600; }
+.stat-value { font-size: 22px; font-weight: 700; margin-top: 5px;
+    font-family: 'JetBrains Mono', monospace; }
+.cyber-table { width: 100%; background: rgba(26,31,58,0.4); backdrop-filter: blur(10px);
+    border-radius: 12px; overflow: hidden; border: 1px solid rgba(0,212,255,0.15); }
+.cyber-table thead { background: rgba(0,212,255,0.08); }
+.cyber-table thead th { color: var(--primary); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 1.5px; font-weight: 700; padding: 15px;
+    border-bottom: 1px solid rgba(0,212,255,0.2); }
+.cyber-table tbody td { padding: 12px 15px; color: var(--light);
+    border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px;
+    transition: background 0.25s; }
+.cyber-table tbody tr:hover { background: rgba(0,212,255,0.05); }
+.cyber-table tbody tr:last-child td { border-bottom: none; }
+.cyber-table tbody tr.row-alert { background: rgba(255,56,96,0.08); }
+.cyber-table tbody tr.row-alert:hover { background: rgba(255,56,96,0.15); }
+.status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px;
+    border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; }
+.pill-up { background: rgba(0,245,160,0.15); color: var(--success);
+    border: 1px solid rgba(0,245,160,0.3); }
+.pill-down { background: rgba(100,116,139,0.15); color: var(--muted);
+    border: 1px solid rgba(100,116,139,0.3); }
+.pill-shut { background: rgba(255,56,96,0.15); color: var(--danger);
+    border: 1px solid rgba(255,56,96,0.3); }
+.pill-access { background: rgba(0,212,255,0.15); color: var(--primary);
+    border: 1px solid rgba(0,212,255,0.3); }
+.pill-trunk { background: rgba(255,0,110,0.15); color: var(--accent);
+    border: 1px solid rgba(255,0,110,0.3); }
+.dot { display:inline-block; width:8px; height:8px; border-radius:50%; }
+.config-viewer { background: rgba(10,14,39,0.9); border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 12px; padding: 25px; color: #7dd3fc;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    max-height: 650px; overflow: auto; white-space: pre-wrap; line-height: 1.7;
+    box-shadow: inset 0 0 40px rgba(0,212,255,0.05); }
+.model-badge { background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(0,212,255,0.3));
+    color: var(--primary); padding: 4px 12px; border-radius: 20px; font-size: 11px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+    border: 1px solid rgba(0,212,255,0.3); vertical-align: middle; }
+.last-scan { text-align: right; color: var(--muted); font-size: 12px;
+    margin-bottom: 15px; font-family: 'JetBrains Mono', monospace; }
+.section-title { color: var(--primary); font-size: 14px; text-transform: uppercase;
+    letter-spacing: 2px; font-weight: 700; margin: 20px 0 15px;
+    padding-bottom: 8px; border-bottom: 2px solid rgba(0,212,255,0.2); }
+.spinning { animation: spin 1s linear infinite; display: inline-block; }
+.bw-cell { font-size: 13px; white-space: nowrap; }
+.util-bar-wrap { background: rgba(0,212,255,0.1); height: 10px; border-radius: 5px;
+    overflow: hidden; }
+.util-bar-fill { height: 100%; transition: width 0.35s ease, background 0.35s ease; }
+
+.tt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px; margin-bottom: 24px; }
+.tt-card { background: rgba(26,31,58,0.7); backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,212,255,0.2); border-radius: 12px; padding: 16px;
+    position: relative; overflow: hidden; transition: all 0.3s; }
+.tt-card:hover { transform: translateY(-2px); border-color: rgba(0,212,255,0.5);
+    box-shadow: 0 8px 25px rgba(0,212,255,0.2); }
+.tt-rank { position: absolute; top: 8px; right: 12px; font-size: 22px;
+    font-weight: 800; font-family: 'JetBrains Mono', monospace; opacity: 0.25; }
+.tt-port { font-family: 'JetBrains Mono', monospace; color: var(--primary);
+    font-size: 15px; font-weight: 700; }
+.tt-desc { color: var(--muted); font-size: 11px; margin: 2px 0 8px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tt-stat { display: flex; justify-content: space-between; font-size: 12px;
+    font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
+.tt-bar { background: rgba(0,212,255,0.1); height: 4px; border-radius: 2px;
+    margin-top: 8px; overflow: hidden; }
+.tt-bar-fill { height: 100%; transition: width 0.4s; }
+
+.sw-alert-banner { background: linear-gradient(135deg, rgba(255,56,96,0.15), rgba(255,0,110,0.1));
+    border: 1px solid rgba(255,56,96,0.4); border-radius: 12px;
+    padding: 14px 20px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 15px;
+    animation: pulseAlert 2s ease-in-out infinite; }
+@keyframes pulseAlert {
+    0%, 100% { box-shadow: 0 0 0 rgba(255,56,96,0); }
+    50%      { box-shadow: 0 0 20px rgba(255,56,96,0.4); }
 }
 
-@keyframes scanRotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+.traffic-controls {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 12px;
 }
-
-.scan-icon {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 34px;
-    color: var(--primary);
-    filter: drop-shadow(0 0 15px var(--primary));
+.range-buttons { display: flex; gap: 6px; }
+.range-btn {
+    background: var(--dark-3); color: var(--light);
+    border: 1px solid rgba(0,212,255,0.2);
+    padding: 7px 14px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s;
 }
-
-/* Live progress bar driven by server */
-.live-progress {
-    max-width: 420px;
-    margin: 15px auto 0;
-    height: 8px;
-    background: rgba(0,212,255,0.1);
-    border-radius: 4px;
-    overflow: hidden;
-    position: relative;
+.range-btn:hover { border-color: var(--primary); color: var(--primary); }
+.range-btn.active {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white; border-color: transparent;
+    box-shadow: 0 4px 15px rgba(0,212,255,0.3);
 }
-
-.live-progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
-    box-shadow: 0 0 12px var(--primary);
-    transition: width 0.4s ease;
-    border-radius: 4px;
-}
-
-.pulse-loader {
-    width: 60px;
-    height: 60px;
-    border: 3px solid rgba(0,212,255,0.2);
-    border-top-color: var(--primary);
-    border-radius: 50%;
-    margin: 0 auto;
-    animation: spin 1s linear infinite;
-    box-shadow: 0 0 20px rgba(0,212,255,0.3);
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Stats Card */
-.stat-card {
-    background: rgba(26, 31, 58, 0.6);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(0,212,255,0.15);
-    border-radius: 12px;
-    padding: 20px;
-    transition: all 0.3s;
-    position: relative;
-    overflow: hidden;
-}
-
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 4px; height: 100%;
-    background: var(--primary);
-}
-
-.stat-card:hover {
-    border-color: rgba(0,212,255,0.4);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,212,255,0.15);
-}
-
-.stat-label {
-    font-size: 11px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    font-weight: 600;
-}
-
-.stat-value {
-    font-size: 22px;
-    font-weight: 700;
-    margin-top: 5px;
+.export-buttons { display: flex; gap: 8px; }
+.cyber-select {
+    background: var(--dark-3); color: var(--light);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 8px; padding: 8px 12px; cursor: pointer;
     font-family: 'JetBrains Mono', monospace;
 }
-
-/* Cyber Table */
-.cyber-table {
-    width: 100%;
-    background: rgba(26, 31, 58, 0.4);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1px solid rgba(0,212,255,0.15);
-}
-
-.cyber-table thead {
-    background: rgba(0,212,255,0.08);
-}
-
-.cyber-table thead th {
-    color: var(--primary);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    font-weight: 700;
-    padding: 15px;
-    border-bottom: 1px solid rgba(0,212,255,0.2);
-}
-
-.cyber-table tbody td {
-    padding: 12px 15px;
-    color: var(--light);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    font-size: 13px;
-}
-
-.cyber-table tbody tr:hover {
-    background: rgba(0,212,255,0.05);
-}
-
-.cyber-table tbody tr:last-child td { border-bottom: none; }
-
-.status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.pill-up {
-    background: rgba(0,245,160,0.15);
-    color: var(--success);
-    border: 1px solid rgba(0,245,160,0.3);
-}
-
-.pill-down {
-    background: rgba(100,116,139,0.15);
-    color: var(--muted);
-    border: 1px solid rgba(100,116,139,0.3);
-}
-
-.pill-shut {
-    background: rgba(255,56,96,0.15);
-    color: var(--danger);
-    border: 1px solid rgba(255,56,96,0.3);
-}
-
-.pill-access {
+.btn-mini-mini {
     background: rgba(0,212,255,0.15);
     color: var(--primary);
     border: 1px solid rgba(0,212,255,0.3);
-}
-
-.pill-trunk {
-    background: rgba(255,0,110,0.15);
-    color: var(--accent);
-    border: 1px solid rgba(255,0,110,0.3);
-}
-
-.dot { display:inline-block; width:8px; height:8px; border-radius:50%; }
-
-/* Config Viewer */
-.config-viewer {
-    background: rgba(10, 14, 39, 0.9);
-    border: 1px solid rgba(0,212,255,0.2);
-    border-radius: 12px;
-    padding: 25px;
-    color: #7dd3fc;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    max-height: 650px;
-    overflow: auto;
-    white-space: pre-wrap;
-    line-height: 1.7;
-    box-shadow: inset 0 0 40px rgba(0,212,255,0.05);
-}
-
-.model-badge {
-    background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(0,212,255,0.3));
-    color: var(--primary);
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border: 1px solid rgba(0,212,255,0.3);
-    vertical-align: middle;
-}
-
-.last-scan {
-    text-align: right;
-    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 6px;
     font-size: 12px;
-    margin-bottom: 15px;
-    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
+.btn-mini-mini:hover { background: rgba(0,212,255,0.25); color: var(--primary); }
+.btn-mini-mini.ghost { color: var(--muted); border-color: rgba(100,116,139,0.3);
+    background: transparent; }
+.btn-mini-mini.ghost:hover { color: var(--light); background: rgba(100,116,139,0.15); }
 
-.section-title {
-    color: var(--primary);
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    font-weight: 700;
-    margin: 20px 0 15px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid rgba(0,212,255,0.2);
+.totals-24h-box { margin-top: 15px; }
+.totals-24h-rank { color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+@media print {
+    .cyber-sidebar, .top-nav, .traffic-controls, #scanBtn,
+    .range-buttons, .export-buttons, #queueBanner, #alertBanner { display: none !important; }
+    body { background: white !important; color: black !important; }
+    .cyber-table { background: white; border-color: #ccc; }
+    .cyber-table thead th, .cyber-table tbody td { color: black !important;
+                                                    border-color: #ddd; }
+    .stat-card, .tt-card { background: white; border-color: #ccc; }
 }
-
-.spinning { animation: spin 1s linear infinite; display: inline-block; }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <script>
 const SW_ID = {{ sw.id }};
 let currentSection = 'overview';
 let pollTimer = null;
+let trafficTimer = null;
+let usageTrafficTimer = null;
+
+// Chart state
+let chartInstance = null;
+let currentRange = '5m';
+let currentPort  = null;
+let allPorts = [];
+
+// Traffic page state (flicker-free)
+let trafficBuilt = false;
+let chartInitDone = false;
 
 // ============================================================
 // NAVIGATION
@@ -529,122 +353,116 @@ let pollTimer = null;
 document.querySelectorAll('.nav-link').forEach(item => {
     item.addEventListener('click', (e) => {
         e.preventDefault();
+        clearInterval(trafficTimer);      trafficTimer = null;
+        clearInterval(usageTrafficTimer); usageTrafficTimer = null;
+
         document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
         item.classList.add('active');
         currentSection = item.dataset.section;
-        loadSection(currentSection);
+
+        // Any nav click invalidates the traffic page structure
+        trafficBuilt = false;
+        chartInitDone = false;
+        window._chartInitDone = false;
+
+        if (currentSection === 'traffic') {
+            onNavToTraffic();
+        } else {
+            loadSection(currentSection);
+        }
     });
 });
 
 // ============================================================
-// SCAN — background job based
+// SCAN
 // ============================================================
 function setScanProgress(pct, msg) {
     document.getElementById('scanBar').style.width = pct + '%';
     document.getElementById('scanPct').textContent = pct + '%';
     if (msg) document.getElementById('scanMsg').textContent = msg;
 }
-
 function showScanPanel() {
     document.getElementById('scanProgress').style.display = 'block';
     document.getElementById('content').innerHTML = '';
+    trafficBuilt = false;
+    window._chartInitDone = false;
 }
-
 function hideScanPanel(delay) {
     setTimeout(() => {
         document.getElementById('scanProgress').style.display = 'none';
         document.getElementById('scanBar').style.width = '0%';
     }, delay || 0);
 }
-
 function resetScanButton() {
     const btn = document.getElementById('scanBtn');
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-satellite-dish"></i><span>Scan Switch Now</span><div class="scan-wave"></div>';
 }
-
 function setScanningButton() {
     const btn = document.getElementById('scanBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-circle-notch spinning"></i><span>Scanning...</span><div class="scan-wave"></div>';
 }
-
 async function startScan() {
     setScanningButton();
     showScanPanel();
     setScanProgress(0, 'Starting...');
-
     try {
         const res = await fetch(`/api/scan/${SW_ID}`, { method: 'POST' });
         const r = await res.json();
-
         if (r.status === 'error') {
             showToast(r.message || 'Scan failed to start', 'danger');
-            resetScanButton();
-            hideScanPanel(0);
-            return;
+            resetScanButton(); hideScanPanel(0); return;
         }
-        if (r.status === 'already_running') {
-            showToast('Scan already running...', 'info');
-        }
-
+        if (r.status === 'already_running') showToast('Scan already running...', 'info');
         pollScanStatus();
     } catch (e) {
         showToast('Network error: ' + e.message, 'danger');
-        resetScanButton();
-        hideScanPanel(0);
+        resetScanButton(); hideScanPanel(0);
     }
 }
-
 function pollScanStatus() {
     clearInterval(pollTimer);
     pollTimer = setInterval(async () => {
         try {
             const res = await fetch(`/api/scan/${SW_ID}/status`);
             const job = await res.json();
-
             if (job.status === 'idle') return;
-
             setScanProgress(job.progress || 0, job.message || 'Working...');
-
             if (job.status === 'done') {
                 clearInterval(pollTimer);
                 setScanProgress(100, 'Scan completed!');
                 showToast('✓ Scan completed successfully!', 'success');
-                resetScanButton();
-                hideScanPanel(1200);
-                // Reload current section
-                loadSection(currentSection);
+                resetScanButton(); hideScanPanel(1200);
+                trafficBuilt = false;
+                window._chartInitDone = false;
+                if (currentSection === 'traffic') onNavToTraffic();
+                else loadSection(currentSection);
             } else if (job.status === 'error') {
                 clearInterval(pollTimer);
                 showToast('✗ ' + (job.message || 'Scan failed'), 'danger');
-                resetScanButton();
-                hideScanPanel(1200);
+                resetScanButton(); hideScanPanel(1200);
             }
-        } catch (e) {
-            console.error('Poll error:', e);
-        }
+        } catch (e) { console.error('Poll error:', e); }
     }, 800);
 }
 
 // ============================================================
-// LOAD SECTION
+// SECTION LOADER (non-traffic sections)
 // ============================================================
 async function loadSection(section) {
     document.getElementById('loader').style.display = 'block';
     document.getElementById('content').innerHTML = '';
-
     try {
         const res = await fetch(`/api/data/${SW_ID}/${section}`);
         const r = await res.json();
         document.getElementById('loader').style.display = 'none';
-
         if (r.status === 'empty') {
             document.getElementById('content').innerHTML = `
                 <div class="text-center py-5" style="background:rgba(26,31,58,0.4); border-radius:12px; border:1px dashed rgba(0,212,255,0.3);">
                     <div style="font-size:60px; color:var(--muted); opacity:0.3;"><i class="fa-solid fa-satellite-dish"></i></div>
                     <h5 class="mt-3 text-primary-glow">No Data Available</h5>
-                    <p style="color:var(--muted);">Click <b>"Scan Switch Now"</b> to fetch live data from device</p>
+                    <p style="color:var(--muted);">Click <b>"Scan Switch Now"</b> to fetch live data</p>
                 </div>`;
             return;
         }
@@ -656,7 +474,7 @@ async function loadSection(section) {
 }
 
 // ============================================================
-// RENDER SECTIONS
+// RENDER OTHER SECTIONS
 // ============================================================
 function renderSection(section, data) {
     const p = data.parsed;
@@ -673,7 +491,7 @@ function renderSection(section, data) {
     }
     else if (section === 'vlans') {
         html += `<h4 class="section-title">VLAN Database</h4>`;
-        html += tableHTML(['VLAN ID', 'Name', 'Ports', 'Status'], p.map(v => [
+        html += tableHTML(['VLAN ID','Name','Ports','Status'], p.map(v => [
             `<span class="mono text-primary-glow">${v.id}</span>`,
             `<b>${v.name}</b>`,
             `<small class="mono">${v.ports}</small>`,
@@ -682,7 +500,7 @@ function renderSection(section, data) {
     }
     else if (section === 'vlan_ips') {
         html += `<h4 class="section-title">Management IP Addresses</h4>`;
-        html += tableHTML(['VLAN', 'IP Address', 'Subnet Mask'], p.map(v => [
+        html += tableHTML(['VLAN','IP Address','Subnet Mask'], p.map(v => [
             `<span class="status-pill pill-access">VLAN ${v.vlan}</span>`,
             `<span class="mono text-primary-glow" style="font-size:14px;">${v.ip}</span>`,
             `<span class="mono">${v.mask}</span>`
@@ -690,12 +508,17 @@ function renderSection(section, data) {
     }
     else if (section === 'interfaces') {
         html += `<h4 class="section-title">Interface Configuration</h4>`;
-        html += tableHTML(['Port', 'Description', 'Mode', 'VLANs', 'PortFast', 'Status'], p.map(i => {
-            let statusBadge = i.status === 'Up' ? '<span class="status-pill pill-up"><span class="dot" style="background:var(--success);box-shadow:0 0 6px var(--success);"></span>Up</span>' :
-                              i.status === 'Admin Down' ? '<span class="status-pill pill-shut"><span class="dot" style="background:var(--danger);"></span>Admin Shut</span>' :
-                              '<span class="status-pill pill-down"><span class="dot" style="background:var(--muted);"></span>Down</span>';
-            let modeBadge = i.mode === 'Trunk' ? '<span class="status-pill pill-trunk">TRUNK</span>' : '<span class="status-pill pill-access">ACCESS</span>';
-            return [`<span class="mono text-primary-glow">${i.port}</span>`, i.description, modeBadge, `<b class="mono">${i.vlans}</b>`, i.portfast, statusBadge];
+        html += tableHTML(['Port','Description','Mode','VLANs','PortFast','Status'], p.map(i => {
+            const sb = i.status === 'Up'
+                ? '<span class="status-pill pill-up"><span class="dot" style="background:var(--success);box-shadow:0 0 6px var(--success);"></span>Up</span>'
+                : i.status === 'Admin Down'
+                ? '<span class="status-pill pill-shut"><span class="dot" style="background:var(--danger);"></span>Admin Shut</span>'
+                : '<span class="status-pill pill-down"><span class="dot" style="background:var(--muted);"></span>Down</span>';
+            const mb = i.mode === 'Trunk'
+                ? '<span class="status-pill pill-trunk">TRUNK</span>'
+                : '<span class="status-pill pill-access">ACCESS</span>';
+            return [`<span class="mono text-primary-glow">${i.port}</span>`, i.description, mb,
+                    `<b class="mono">${i.vlans}</b>`, i.portfast, sb];
         }));
     }
     else if (section === 'interface_usage') {
@@ -704,14 +527,31 @@ function renderSection(section, data) {
             <div class="col-md-4"><div class="stat-card" style="border-left-color:var(--muted);"><div class="stat-label">Unused Ports</div><div class="stat-value" style="font-size:36px; color:var(--muted);">${p.unused.length}</div></div></div>
             <div class="col-md-4"><div class="stat-card" style="border-left-color:var(--primary);"><div class="stat-label">Total Ports</div><div class="stat-value text-primary-glow" style="font-size:36px;">${p.total}</div></div></div>
         </div>`;
-        html += `<h4 class="section-title" style="color:var(--success);">🟢 Active/Used Ports</h4>`;
-        html += tableHTML(['Port', 'Name', 'Status', 'VLAN'], p.used.map(i => [`<span class="mono text-primary-glow">${i.port}</span>`, i.name, `<span class="status-pill pill-up">${i.status}</span>`, i.vlan]));
+        html += `<h4 class="section-title" style="color:var(--success);">🟢 Active/Used Ports <small style="color:var(--muted); font-size:11px; letter-spacing:0;">(live • refresh every 2s)</small></h4>`;
+        html += `<table class="cyber-table"><thead><tr>
+                    <th>Port</th><th>Name</th><th>Status</th><th>VLAN</th>
+                    <th style="text-align:right;">Live Bandwidth</th>
+                 </tr></thead><tbody>`;
+        p.used.forEach(i => {
+            html += `<tr data-port="${normalizePortJS(i.port)}">
+                <td class="mono text-primary-glow">${i.port}</td>
+                <td>${i.name}</td>
+                <td><span class="status-pill pill-up">${i.status}</span></td>
+                <td>${i.vlan}</td>
+                <td class="bw-cell mono" style="text-align:right; color:var(--muted);">…</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
         html += `<h4 class="section-title" style="color:var(--muted); margin-top:30px;">⚪ Inactive/Unused Ports</h4>`;
-        html += tableHTML(['Port', 'Name', 'Status', 'VLAN'], p.unused.map(i => [`<span class="mono">${i.port}</span>`, i.name, `<span class="status-pill pill-down">${i.status}</span>`, i.vlan]));
+        html += tableHTML(['Port','Name','Status','VLAN'], p.unused.map(i => [
+            `<span class="mono">${i.port}</span>`, i.name,
+            `<span class="status-pill pill-down">${i.status}</span>`, i.vlan
+        ]));
+        setTimeout(attachTrafficToUsageTable, 0);
     }
     else if (section === 'cdp') {
         html += `<h4 class="section-title">Connected Network Devices</h4>`;
-        html += tableHTML(['Local Port', 'Device Name', 'Platform', 'Capability', 'Remote Port', 'IP Address'], p.map(c => [
+        html += tableHTML(['Local Port','Device Name','Platform','Capability','Remote Port','IP Address'], p.map(c => [
             `<span class="mono text-primary-glow">${c.local_port}</span>`,
             `<b>${c.device}</b>`, c.platform,
             `<span class="status-pill pill-access">${c.capability}</span>`,
@@ -721,42 +561,46 @@ function renderSection(section, data) {
     }
     else if (section === 'radius') {
         html += `<h4 class="section-title">RADIUS Authentication Servers</h4>`;
-        html += tableHTML(['Server IP', 'Encryption Key'], p.map(r => [
+        html += tableHTML(['Server IP','Encryption Key'], p.map(r => [
             `<span class="mono text-primary-glow" style="font-size:14px;">${r.ip}</span>`,
             `<span class="status-pill pill-up">${r.key}</span>`
         ]));
     }
     else if (section === 'snmp') {
         html += `<h4 class="section-title">SNMP Communities</h4>`;
-        html += tableHTML(['Community', 'Access', 'View'], p.communities.map(c => [`<span class="mono">${c.community}</span>`, `<span class="status-pill pill-access">${c.access}</span>`, c.view]));
+        html += tableHTML(['Community','Access','View'], p.communities.map(c => [
+            `<span class="mono">${c.community}</span>`,
+            `<span class="status-pill pill-access">${c.access}</span>`, c.view
+        ]));
         html += `<h4 class="section-title" style="margin-top:30px;">SNMP Trap Hosts</h4>`;
-        html += tableHTML(['Host IP', 'Type', 'Version'], p.hosts.map(h => [`<span class="mono text-primary-glow">${h.ip}</span>`, h.type, `<span class="status-pill pill-trunk">${h.version}</span>`]));
+        html += tableHTML(['Host IP','Type','Version'], p.hosts.map(h => [
+            `<span class="mono text-primary-glow">${h.ip}</span>`, h.type,
+            `<span class="status-pill pill-trunk">${h.version}</span>`
+        ]));
     }
     else if (section === 'logging') {
         html += `<div class="row g-3 mb-4">
-            <div class="col-md-4"><div class="stat-card"><div class="stat-label">Console Logging</div><div class="stat-value" style="font-size:20px; color:${p.console === 'Enabled' ? 'var(--success)' : 'var(--danger)'};">${p.console}</div></div></div>
-            <div class="col-md-4"><div class="stat-card"><div class="stat-label">File Logging</div><div class="stat-value" style="font-size:20px;">${p.file}</div></div></div>
-            <div class="col-md-4"><div class="stat-card"><div class="stat-label">Buffered Level</div><div class="stat-value" style="font-size:20px; color:var(--warning);">${p.buffered}</div></div></div>
+            <div class="col-md-4"><div class="stat-card"><div class="stat-label">Console</div><div class="stat-value" style="font-size:20px; color:${p.console === 'Enabled' ? 'var(--success)' : 'var(--danger)'};">${p.console}</div></div></div>
+            <div class="col-md-4"><div class="stat-card"><div class="stat-label">File</div><div class="stat-value" style="font-size:20px;">${p.file}</div></div></div>
+            <div class="col-md-4"><div class="stat-card"><div class="stat-label">Buffered</div><div class="stat-value" style="font-size:20px; color:var(--warning);">${p.buffered}</div></div></div>
         </div>`;
         html += `<h4 class="section-title">Syslog Servers</h4>`;
-        html += tableHTML(['Server IP'], p.servers.map(s => [`<span class="mono text-primary-glow" style="font-size:14px;">${s.ip}</span>`]));
-        html += `<h4 class="section-title" style="margin-top: 30px;">
-                    <i class="fa-solid fa-terminal me-2"></i>Recent Device Logs (Buffer)
-                 </h4>`;
-        html += `<div class="config-viewer" style="max-height: 400px; border-color: rgba(255, 0, 110, 0.3); box-shadow: inset 0 0 40px rgba(255,0,110,0.05); color: #e2e8f0;">
-                    ${escapeHTML(p.recent_logs)}
-                 </div>`;
+        html += tableHTML(['Server IP'], p.servers.map(s => [
+            `<span class="mono text-primary-glow" style="font-size:14px;">${s.ip}</span>`
+        ]));
+        html += `<h4 class="section-title" style="margin-top:30px;"><i class="fa-solid fa-terminal me-2"></i>Recent Logs</h4>`;
+        html += `<div class="config-viewer" style="max-height:400px; border-color: rgba(255,0,110,0.3); color: #e2e8f0;">${escapeHTML(p.recent_logs)}</div>`;
     }
     else if (section === 'raw_config') {
         html += `<h4 class="section-title">Complete Running Configuration</h4>`;
         html += `<div class="config-viewer">${escapeHTML(p.config)}</div>`;
     }
-
     document.getElementById('content').innerHTML = html;
 }
 
 function tableHTML(headers, rows) {
-    if (!rows || rows.length === 0) return '<div class="alert" style="background:rgba(0,212,255,0.05); border:1px solid rgba(0,212,255,0.2); color:var(--light);">No data available in this section.</div>';
+    if (!rows || rows.length === 0)
+        return '<div class="alert" style="background:rgba(0,212,255,0.05); border:1px solid rgba(0,212,255,0.2); color:var(--light);">No data available.</div>';
     let h = `<table class="cyber-table"><thead><tr>`;
     headers.forEach(x => h += `<th>${x}</th>`);
     h += `</tr></thead><tbody>`;
@@ -765,17 +609,632 @@ function tableHTML(headers, rows) {
     return h;
 }
 
-function escapeHTML(s) {
-    if (!s) return '';
-    return String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// ============================================================
+// SPARKLINE
+// ============================================================
+function sparkline(samples, width = 140, height = 28) {
+    if (!samples || samples.length < 2)
+        return '<span style="color:var(--muted);font-size:10px;">—</span>';
+
+    const maxV = Math.max(1, ...samples.map(s => Math.max(s.in, s.out)));
+    const step = width / (samples.length - 1);
+
+    const toPoints = (key) => samples.map((s, i) =>
+        `${(i * step).toFixed(1)},${(height - (s[key] / maxV) * height).toFixed(1)}`
+    ).join(' ');
+
+    return `<svg width="${width}" height="${height}" style="vertical-align:middle; display:block;">
+        <polyline points="${toPoints('in')}"  fill="none" stroke="#00f5a0" stroke-width="1.4" opacity="0.9"/>
+        <polyline points="${toPoints('out')}" fill="none" stroke="#ff006e" stroke-width="1.4" opacity="0.9"/>
+    </svg>`;
 }
 
+// ============================================================
+// LIVE TRAFFIC PAGE — FLICKER-FREE
+// ============================================================
+function onNavToTraffic() {
+    clearInterval(trafficTimer);
+    if (!trafficBuilt) {
+        buildTrafficPage().then(() => {
+            refreshTrafficData();
+        });
+    } else {
+        refreshTrafficData();
+    }
+    trafficTimer = setInterval(refreshTrafficData, 2000);
+}
+
+async function buildTrafficPage() {
+    const content = document.getElementById('content');
+    const loader = document.getElementById('loader');
+    if (loader) loader.style.display = 'none';
+
+    content.innerHTML = `
+      <div id="trafficPageRoot">
+        <div id="trafficAlertSlot"></div>
+        <div class="last-scan" id="trafficLastScan">
+            <i class="fa-solid fa-satellite-dish spinning me-1"></i> Collecting SNMP data…
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-4"><div class="stat-card" style="border-left-color:var(--success);">
+            <div class="stat-label">Total Ingress</div>
+            <div class="stat-value text-success-glow" id="tcTotalIn" style="font-size:24px;">—</div>
+          </div></div>
+          <div class="col-md-4"><div class="stat-card" style="border-left-color:var(--accent);">
+            <div class="stat-label">Total Egress</div>
+            <div class="stat-value" id="tcTotalOut" style="font-size:24px; color:var(--accent);">—</div>
+          </div></div>
+          <div class="col-md-4"><div class="stat-card" style="border-left-color:var(--primary);">
+            <div class="stat-label">Active Ports</div>
+            <div class="stat-value text-primary-glow" id="tcActivePorts" style="font-size:24px;">—</div>
+          </div></div>
+        </div>
+
+        <h4 class="section-title">🏆 Top Talkers</h4>
+        <div id="topTalkersGrid" class="tt-grid"></div>
+
+        <h4 class="section-title">Real-Time Port Bandwidth <small style="color:var(--muted); font-size:11px; letter-spacing:0;">(refresh every 2s)</small></h4>
+        <div id="portTableWrap"></div>
+
+        <h4 class="section-title" style="margin-top:30px;">📦 Bandwidth Usage — Last 24 Hours</h4>
+        <div id="totalsBox" class="totals-24h-box">
+          <div style="text-align:center; color:var(--muted); padding:20px;">
+            <i class="fa-solid fa-spinner spinning"></i> Loading 24h totals...
+          </div>
+        </div>
+
+        <h4 class="section-title" style="margin-top:30px;">📊 Traffic Chart & Export</h4>
+        <div class="traffic-controls">
+          <div class="range-buttons">
+            <button class="range-btn active" data-range="5m">5 min</button>
+            <button class="range-btn" data-range="1h">1 hour</button>
+            <button class="range-btn" data-range="24h">24 hours</button>
+            <button class="range-btn" data-range="7d">7 days</button>
+          </div>
+          <div class="export-buttons">
+            <a href="/export/${SW_ID}/traffic.csv" class="btn-mini-mini">
+              <i class="fa-solid fa-file-csv"></i>Traffic CSV
+            </a>
+            <a href="/export/${SW_ID}/top-talkers.csv" class="btn-mini-mini">
+              <i class="fa-solid fa-trophy"></i>Top Talkers CSV
+            </a>
+            <button class="btn-mini-mini ghost" onclick="window.print()">
+              <i class="fa-solid fa-print"></i>Print / PDF
+            </button>
+          </div>
+        </div>
+        <div style="background:rgba(26,31,58,0.6); border-radius:12px; padding:20px;
+                    border:1px solid rgba(0,212,255,0.15); margin-top:15px;">
+          <div style="margin-bottom:12px; font-size:13px; color:var(--muted);">
+            Select a port to plot:
+            <select id="chartPortSelect" class="cyber-select"
+                    style="display:inline-block; width:auto; margin-left:10px;
+                           padding:6px 12px; font-size:13px;">
+            </select>
+          </div>
+          <div style="position:relative; height:340px;">
+            <canvas id="trafficChart"></canvas>
+          </div>
+        </div>
+      </div>
+    `;
+    trafficBuilt = true;
+
+    // Load 24h totals ONCE
+    load24hTotals();
+}
+
+async function refreshTrafficData() {
+    if (!trafficBuilt) return;
+    if (!document.getElementById('trafficPageRoot')) return;
+
+    let data, history;
+    try {
+        const [rTraffic, rHistory] = await Promise.all([
+            fetch(`/api/traffic/${SW_ID}`),
+            fetch(`/api/traffic/${SW_ID}/history`),
+        ]);
+        data = await rTraffic.json();
+        const histResp = await rHistory.json();
+        history = histResp.status === 'ok' ? histResp.history : {};
+    } catch (e) { return; }
+
+    // ---- Warming up ----
+    if (data.status === 'warming_up') {
+        const el = document.getElementById('trafficLastScan');
+        if (el) el.innerHTML = `<i class="fa-solid fa-satellite-dish spinning me-1"></i> Collecting SNMP data — first poll takes up to 5s…`;
+        return;
+    }
+    if (data.status !== 'ok') return;
+
+    const ports = data.ports
+        .filter(p => p.speed_mbps > 0 && (p.oper_up || p.in_bps > 0 || p.out_bps > 0))
+        .sort((a, b) => (b.in_bps + b.out_bps) - (a.in_bps + a.out_bps));
+
+    const totalIn  = ports.reduce((s, p) => s + p.in_bps,  0);
+    const totalOut = ports.reduce((s, p) => s + p.out_bps, 0);
+
+    // ---- Last scan text ----
+    const el = document.getElementById('trafficLastScan');
+    if (el) el.innerHTML = `<i class="fa-solid fa-clock me-1"></i> Live • updated ${data.age_sec}s ago • <span class="mono">${escapeHTML(data.sw_ip)}</span>`;
+
+    // ---- Alert banner ----
+    const alertSlot = document.getElementById('trafficAlertSlot');
+    if (alertSlot) {
+        const highUtil = ports.filter(p => Math.max(p.in_util_pct, p.out_util_pct) >= 80);
+        if (highUtil.length === 0) {
+            if (alertSlot.innerHTML) alertSlot.innerHTML = '';
+        } else {
+            const names = highUtil.slice(0, 3).map(p =>
+                `<span class="mono" style="color:var(--primary);">${escapeHTML(p.name)}</span> ` +
+                `<span style="color:var(--danger);">${Math.max(p.in_util_pct, p.out_util_pct)}%</span>`
+            ).join(' · ');
+            const more = highUtil.length > 3 ? ` <span style="color:var(--muted);">(+${highUtil.length - 3})</span>` : '';
+            alertSlot.innerHTML = `<div class="sw-alert-banner">
+                <i class="fa-solid fa-triangle-exclamation" style="color:var(--danger); font-size:24px;"></i>
+                <div style="flex:1;">
+                    <div style="font-weight:700; color:var(--danger); font-size:14px;">High Utilization Alert (≥80%)</div>
+                    <div style="font-size:12px;">${names}${more}</div>
+                </div>
+            </div>`;
+        }
+    }
+
+    // ---- Stat cards ----
+    setText('tcTotalIn',    fmtBps(totalIn));
+    setText('tcTotalOut',   fmtBps(totalOut));
+    setText('tcActivePorts', ports.length);
+
+    // ---- Top Talkers (rebuild cards only — only 5) ----
+    const ttGrid = document.getElementById('topTalkersGrid');
+    if (ttGrid) {
+        const top = (data.top_talkers || []).filter(p => (p.in_bps + p.out_bps) > 0);
+        if (top.length === 0) {
+            if (ttGrid.innerHTML.indexOf('No active traffic') < 0) {
+                ttGrid.innerHTML = `<div style="color:var(--muted); padding:20px;">No active traffic.</div>`;
+            }
+        } else {
+            ttGrid.innerHTML = top.map((p, i) => {
+                const util = Math.max(p.in_util_pct, p.out_util_pct);
+                const color = util > 80 ? 'var(--danger)' : util > 50 ? 'var(--warning)' : 'var(--success)';
+                return `<div class="tt-card">
+                    <div class="tt-rank">#${i + 1}</div>
+                    <div class="tt-port">${escapeHTML(p.name)}</div>
+                    <div class="tt-desc">${escapeHTML(p.descr) || '-'}</div>
+                    <div class="tt-stat"><span style="color:var(--success);">↓ ${fmtBps(p.in_bps)}</span>
+                        <span style="color:var(--accent);">↑ ${fmtBps(p.out_bps)}</span></div>
+                    <div class="tt-bar"><div class="tt-bar-fill" style="width:${Math.min(util,100)}%; background:${color}; box-shadow:0 0 8px ${color};"></div></div>
+                    <div class="tt-stat" style="color:${color}; font-size:11px; margin-top:4px;">
+                        <span>${util}% of ${p.speed_mbps} Mbps</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    // ---- Port table (build once, then update in place) ----
+    const tableWrap = document.getElementById('portTableWrap');
+    if (tableWrap) {
+        const newSig = ports.map(p => p.name).join('|');
+
+        if (tableWrap.dataset.signature !== newSig) {
+            if (ports.length === 0) {
+                tableWrap.innerHTML = `<div class="alert" style="background:rgba(0,212,255,0.05); border:1px solid rgba(0,212,255,0.2); color:var(--light);">No active ports detected via SNMP.</div>`;
+            } else {
+                let t = `<table class="cyber-table"><thead><tr>
+                    <th>Port</th><th>Description</th><th>Speed</th>
+                    <th style="text-align:right;">IN</th>
+                    <th style="text-align:right;">OUT</th>
+                    <th style="width:180px;">Utilization</th>
+                    <th style="width:150px;">Last 5 min</th>
+                </tr></thead><tbody>`;
+                for (const p of ports) {
+                    t += `<tr data-port="${escapeAttr(p.name)}">
+                        <td class="mono text-primary-glow col-port">${escapeHTML(p.name)}</td>
+                        <td class="col-desc">${escapeHTML(p.descr) || '-'}</td>
+                        <td class="mono col-speed">${p.speed_mbps} Mbps</td>
+                        <td class="mono col-in"  style="text-align:right; color:var(--success);">—</td>
+                        <td class="mono col-out" style="text-align:right; color:var(--accent);">—</td>
+                        <td class="col-util">
+                            <div class="util-bar-wrap"><div class="util-bar-fill" style="width:0%;"></div></div>
+                            <small class="mono cell-util">0%</small>
+                        </td>
+                        <td class="col-spark"></td>
+                    </tr>`;
+                }
+                t += `</tbody></table>`;
+                tableWrap.innerHTML = t;
+            }
+            tableWrap.dataset.signature = newSig;
+        }
+
+        // In-place value updates
+        for (const p of ports) {
+            const tr = tableWrap.querySelector(`tr[data-port="${cssEscape(p.name)}"]`);
+            if (!tr) continue;
+
+            const util = Math.max(p.in_util_pct, p.out_util_pct);
+            const isAlert = util >= 80;
+            const color = util > 80 ? 'var(--danger)' : util > 50 ? 'var(--warning)' : 'var(--success)';
+
+            tr.classList.toggle('row-alert', isAlert);
+
+            const inCell = tr.querySelector('.col-in');
+            if (inCell) inCell.innerHTML = `↓ ${fmtBps(p.in_bps)}`;
+
+            const outCell = tr.querySelector('.col-out');
+            if (outCell) outCell.innerHTML = `↑ ${fmtBps(p.out_bps)}`;
+
+            const bar = tr.querySelector('.util-bar-fill');
+            if (bar) {
+                bar.style.width = Math.min(util, 100) + '%';
+                bar.style.background = color;
+                bar.style.boxShadow = `0 0 8px ${color}`;
+            }
+
+            const utilLabel = tr.querySelector('.cell-util');
+            if (utilLabel) {
+                utilLabel.textContent = util + '%';
+                utilLabel.style.color = color;
+            }
+
+            const sparkCell = tr.querySelector('.col-spark');
+            if (sparkCell) {
+                const samples = history[p.name] || [];
+                sparkCell.innerHTML = sparkline(samples, 140, 28);
+            }
+        }
+    }
+
+    // ---- Chart — initialise only ONCE with the first non-empty port list ----
+    if (!chartInitDone && ports.length > 0) {
+        chartInitDone = true;
+        initTrafficChart(ports);
+    }
+}
+
+function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
+
+function cssEscape(s) {
+    // Escape for querySelector attribute selector (simple)
+    return String(s).replace(/[\\"]/g, '\\$&');
+}
+
+// ============================================================
+// 24-HOUR TOTAL BANDWIDTH PER PORT
+// ============================================================
+async function load24hTotals() {
+    const box = document.getElementById('totalsBox');
+    if (!box) return;
+
+    try {
+        const r = await fetch(`/api/traffic/${SW_ID}/totals?range=24h`);
+        const data = await r.json();
+
+        if (data.status !== 'ok' || !data.ports.length) {
+            box.innerHTML = `<div class="alert" style="background:rgba(0,212,255,0.05);
+                border:1px solid rgba(0,212,255,0.2); color:var(--light);">
+                No 24-hour data yet. Wait for DB samples to accumulate
+                (saved every 60 seconds).
+            </div>`;
+            return;
+        }
+
+        let html = '';
+
+        html += `<div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <div class="stat-card" style="border-left-color:var(--success);">
+                    <div class="stat-label">Total Downloaded (24h)</div>
+                    <div class="stat-value text-success-glow" style="font-size:22px;">
+                        ${fmtBytes(data.total_in)}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card" style="border-left-color:var(--accent);">
+                    <div class="stat-label">Total Uploaded (24h)</div>
+                    <div class="stat-value" style="font-size:22px; color:var(--accent);">
+                        ${fmtBytes(data.total_out)}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card" style="border-left-color:var(--primary);">
+                    <div class="stat-label">Grand Total (24h)</div>
+                    <div class="stat-value text-primary-glow" style="font-size:22px;">
+                        ${fmtBytes(data.grand_total)}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        html += `<table class="cyber-table"><thead><tr>
+            <th style="width:50px;">#</th>
+            <th>Port</th>
+            <th style="text-align:right;">Downloaded</th>
+            <th style="text-align:right;">Uploaded</th>
+            <th style="text-align:right;">Total</th>
+            <th style="width:180px;">Share of Total</th>
+        </tr></thead><tbody>`;
+
+        data.ports.forEach((p, i) => {
+            const barColor = p.pct > 40 ? 'var(--danger)'
+                           : p.pct > 20 ? 'var(--warning)'
+                           : 'var(--success)';
+            html += `<tr>
+                <td class="mono totals-24h-rank">${i + 1}</td>
+                <td class="mono text-primary-glow">${escapeHTML(p.port)}</td>
+                <td class="mono" style="text-align:right; color:var(--success);">
+                    ↓ ${fmtBytes(p.in_bytes)}
+                </td>
+                <td class="mono" style="text-align:right; color:var(--accent);">
+                    ↑ ${fmtBytes(p.out_bytes)}
+                </td>
+                <td class="mono" style="text-align:right; font-weight:700;">
+                    ${fmtBytes(p.total_bytes)}
+                </td>
+                <td>
+                    <div class="util-bar-wrap">
+                        <div class="util-bar-fill"
+                             style="width:${Math.min(p.pct, 100)}%;
+                                    background:${barColor};
+                                    box-shadow:0 0 8px ${barColor};"></div>
+                    </div>
+                    <small class="mono" style="color:${barColor};">${p.pct}%</small>
+                </td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+
+        html += `<div style="margin-top:12px; text-align:right;">
+            <a href="/export/${SW_ID}/totals.csv?range=24h" class="btn-mini-mini">
+                <i class="fa-solid fa-file-csv"></i>Export 24h Totals
+            </a>
+        </div>`;
+
+        box.innerHTML = html;
+    } catch (e) {
+        console.error('load24hTotals error:', e);
+        box.innerHTML = `<div class="alert" style="background:rgba(255,56,96,0.1);
+            border:1px solid rgba(255,56,96,0.3); color:var(--light);">
+            Failed to load 24h totals: ${escapeHTML(e.message)}
+        </div>`;
+    }
+}
+
+// ============================================================
+// TRAFFIC CHART (Chart.js) — initialised ONCE
+// ============================================================
+function initTrafficChart(ports) {
+    allPorts = ports.map(p => p.name);
+    const sel = document.getElementById('chartPortSelect');
+    if (!sel) return;
+
+    sel.innerHTML = allPorts.map(p =>
+        `<option value="${p}">${p}</option>`).join('');
+
+    currentPort = allPorts[0] || null;
+    if (currentPort) sel.value = currentPort;
+
+    sel.addEventListener('change', e => {
+        currentPort = e.target.value;
+        loadChartData();
+    });
+
+    document.querySelectorAll('.range-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentRange = btn.dataset.range;
+            loadChartData();
+        });
+    });
+
+    if (typeof Chart === 'undefined') {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+        s.onload = () => loadChartData();
+        document.head.appendChild(s);
+    } else {
+        loadChartData();
+    }
+}
+
+async function loadChartData() {
+    if (!currentPort) return;
+    let points = [];
+
+    if (currentRange === '5m') {
+        try {
+            const r = await fetch(`/api/traffic/${SW_ID}/history`);
+            const h = await r.json();
+            if (h.status === 'ok' && h.history[currentPort]) {
+                const now = Date.now() / 1000;
+                points = h.history[currentPort].map(s => ({
+                    ts: now - s.t,
+                    in_bps: s.in,
+                    out_bps: s.out
+                })).sort((a, b) => a.ts - b.ts);
+            }
+        } catch (e) { console.error(e); }
+    } else {
+        try {
+            const r = await fetch(`/api/traffic/${SW_ID}/chart?port=${encodeURIComponent(currentPort)}&range=${currentRange}`);
+            const d = await r.json();
+            if (d.status === 'ok') points = d.points;
+        } catch (e) { console.error(e); }
+    }
+
+    drawChart(points);
+}
+
+function drawChart(points) {
+    const canvas = document.getElementById('trafficChart');
+    if (!canvas) return;
+
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+    if (!points.length) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '14px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('No data for this range. Wait for DB samples to accumulate.',
+                     canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
+    const labels = points.map(p => {
+        const d = new Date(p.ts * 1000);
+        return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    });
+    const inData  = points.map(p => +(p.in_bps  / 1e6).toFixed(2));
+    const outData = points.map(p => +(p.out_bps / 1e6).toFixed(2));
+
+    chartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'IN (Mbps)',
+                    data: inData,
+                    borderColor: '#00f5a0',
+                    backgroundColor: 'rgba(0,245,160,0.1)',
+                    borderWidth: 2,
+                    tension: 0.35,
+                    pointRadius: 0,
+                    fill: true,
+                },
+                {
+                    label: 'OUT (Mbps)',
+                    data: outData,
+                    borderColor: '#ff006e',
+                    backgroundColor: 'rgba(255,0,110,0.1)',
+                    borderWidth: 2,
+                    tension: 0.35,
+                    pointRadius: 0,
+                    fill: true,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: '#e2e8f0', font: { family: 'Inter' } } },
+                tooltip: {
+                    backgroundColor: 'rgba(19,24,54,0.95)',
+                    borderColor: 'rgba(0,212,255,0.4)',
+                    borderWidth: 1,
+                    titleColor: '#00d4ff',
+                    bodyColor: '#e2e8f0',
+                    callbacks: {
+                        label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y} Mbps`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(0,212,255,0.08)' },
+                    ticks: { color: '#64748b', maxTicksLimit: 12 }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0,212,255,0.08)' },
+                    ticks: { color: '#64748b',
+                             callback: v => v + ' Mbps' }
+                }
+            }
+        }
+    });
+}
+
+// ============================================================
+// Used/Unused Ports — live bandwidth column
+// ============================================================
+function attachTrafficToUsageTable() {
+    clearInterval(usageTrafficTimer);
+    const rows = document.querySelectorAll('tr[data-port]');
+    if (!rows.length) return;
+
+    async function refresh() {
+        try {
+            const r = await fetch(`/api/traffic/${SW_ID}`);
+            const data = await r.json();
+            if (data.status !== 'ok') return;
+
+            const byNorm = {};
+            data.ports.forEach(p => {
+                byNorm[p.name] = p;
+                if (p.descr) byNorm[p.descr.toLowerCase()] = p;
+            });
+
+            document.querySelectorAll('tr[data-port]').forEach(tr => {
+                const cell = tr.querySelector('.bw-cell');
+                if (!cell) return;
+                const p = byNorm[tr.dataset.port];
+                if (!p) { cell.innerHTML = '<span style="color:var(--muted);">—</span>'; return; }
+                const util = Math.max(p.in_util_pct, p.out_util_pct);
+                const warn = util >= 80 ? ' style="color:var(--danger); font-weight:700;"' : '';
+                cell.innerHTML =
+                    `<span style="color:var(--success);">↓ ${fmtBps(p.in_bps)}</span>` +
+                    ` <span style="color:var(--muted);">/</span> ` +
+                    `<span style="color:var(--accent);">↑ ${fmtBps(p.out_bps)}</span>` +
+                    (util >= 80 ? ` <span${warn}>(${util}%)</span>` : '');
+            });
+        } catch (_) {}
+    }
+    refresh();
+    usageTrafficTimer = setInterval(refresh, 2000);
+}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function escapeHTML(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, m =>
+        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escapeAttr(s) { return escapeHTML(s); }
+function fmtBps(bps) {
+    if (!bps) return '0 bps';
+    if (bps >= 1e9) return (bps / 1e9).toFixed(2) + ' Gbps';
+    if (bps >= 1e6) return (bps / 1e6).toFixed(2) + ' Mbps';
+    if (bps >= 1e3) return (bps / 1e3).toFixed(1) + ' Kbps';
+    return bps + ' bps';
+}
+function fmtBytes(bytes) {
+    if (!bytes) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    let i = 0;
+    let v = bytes;
+    while (v >= 1024 && i < units.length - 1) {
+        v /= 1024;
+        i++;
+    }
+    return v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2) + ' ' + units[i];
+}
+function normalizePortJS(name) {
+    let s = String(name).toLowerCase().trim();
+    s = s.replace(/^gigabitethernet/,    'gi');
+    s = s.replace(/^fastethernet/,       'fa');
+    s = s.replace(/^tengigabitethernet/, 'te');
+    s = s.replace(/^port-channel/,       'po');
+    return s;
+}
 function showToast(msg, type) {
     const container = document.querySelector('.flash-container') || (() => {
-        const d = document.createElement('div');
-        d.className = 'flash-container';
-        document.body.appendChild(d);
-        return d;
+        const d = document.createElement('div'); d.className = 'flash-container';
+        document.body.appendChild(d); return d;
     })();
     const toast = document.createElement('div');
     toast.className = `flash-msg ${type}`;
@@ -792,14 +1251,12 @@ function showToast(msg, type) {
 // ============================================================
 loadSection('overview');
 
-// On page load — check if a scan is already running for this switch
 window.addEventListener('load', async () => {
     try {
         const res = await fetch(`/api/scan/${SW_ID}/status`);
         const job = await res.json();
         if (job.status === 'running') {
-            setScanningButton();
-            showScanPanel();
+            setScanningButton(); showScanPanel();
             setScanProgress(job.progress || 0, job.message || 'Working...');
             pollScanStatus();
         }

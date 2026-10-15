@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% block title %}All Switches Traffic — NetScan Pro{% endblock %}
+{% block content %}
+<div class="container-fluid p-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1"><i class="fa-solid fa-chart-line text-primary-glow me-2"></i>All Switches — Live Traffic</h3>
+            <div style="color:var(--muted); font-size:13px;">
+                <i class="fa-solid fa-clock me-1"></i>
+                <span id="lastUpdate">—</span> •
+                <span id="swCount">0</span> switches •
+                Auto-refresh every 3s
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/export/all/traffic.csv" class="btn-outline-neon">
+                <i class="fa-solid fa-file-csv"></i>Export All
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="glass-card" style="border-left:4px solid var(--success);">
+                <div class="stat-lbl">Total Network Ingress</div>
+                <h2 class="mono stat-num text-success-glow" id="totalIn">0 bps</h2>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="glass-card" style="border-left:4px solid var(--accent);">
+                <div class="stat-lbl">Total Network Egress</div>
+                <h2 class="mono stat-num" id="totalOut" style="color:var(--accent);">0 bps</h2>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="glass-card" style="border-left:4px solid var(--danger);">
+                <div class="stat-lbl">Active Alerts (≥80%)</div>
+                <h2 class="mono stat-num" id="totalAlerts" style="color:var(--danger);">0</h2>
+            </div>
+        </div>
+    </div>
+
+    <div id="switchList" class="row g-3"></div>
+
+</div>
+
+<style>
+.stat-lbl { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+.stat-num { font-size: 30px; font-weight: 800; margin: 6px 0 0; letter-spacing: -0.5px; }
+
+.sw-traffic-card {
+    background: rgba(22,26,53,0.6);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,212,255,0.12);
+    border-radius: 16px;
+    padding: 18px;
+    transition: transform 0.4s var(--ease-out),
+                border-color 0.3s var(--ease-smooth),
+                box-shadow 0.4s var(--ease-out);
+    position: relative;
+    overflow: hidden;
+    animation: cardIn 0.5s var(--ease-out) both;
+    will-change: transform;
+}
+.sw-traffic-card:hover {
+    border-color: rgba(0,212,255,0.45);
+    transform: translate3d(0, -4px, 0);
+    box-shadow: 0 18px 48px rgba(0,212,255,0.18);
+}
+.sw-traffic-card.has-alert {
+    border-color: rgba(255,56,96,0.55);
+    box-shadow: 0 0 26px rgba(255,56,96,0.18);
+}
+.sw-traffic-card.has-alert::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--danger), transparent);
+    border-radius: 16px 16px 0 0;
+    animation: pulseAlert 2s var(--ease-in-out) infinite;
+}
+@keyframes pulseAlert {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1; }
+}
+@keyframes cardIn {
+    from { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.98); }
+    to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+.sw-name-row { display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px; }
+.sw-name-t { font-size: 15.5px; font-weight: 700; color: white; margin: 0; letter-spacing: -0.3px; }
+.sw-ip-t { font-family: 'JetBrains Mono', monospace; color: var(--primary); font-size: 12px; margin-top: 2px; }
+.sw-status-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 8px; vertical-align: middle;
+}
+.dot-online { background: var(--success); box-shadow: 0 0 10px var(--success); animation: dotPulse 2s var(--ease-in-out) infinite; }
+.dot-offline { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.dot-unknown { background: var(--muted); }
+@keyframes dotPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.35); opacity: 0.75; }
+}
+
+.traffic-row { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 13px; margin-top: 4px; }
+.traffic-big { font-size: 19px; font-weight: 800; margin: 10px 0; font-family: 'JetBrains Mono', monospace; letter-spacing: -0.5px; }
+.tt-detail { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,212,255,0.1); }
+.alert-badge {
+    display: inline-block; background: rgba(255,56,96,0.2); color: var(--danger);
+    border: 1px solid rgba(255,56,96,0.4);
+    padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700;
+    margin-left: 6px;
+}
+.sw-btn {
+    display: block; text-align: center;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white; text-decoration: none;
+    padding: 9px 12px; border-radius: 9px;
+    font-size: 12px; font-weight: 600;
+    transition: transform 0.2s var(--ease-out), box-shadow 0.25s;
+}
+.sw-btn:hover {
+    transform: translate3d(0, -1px, 0);
+    box-shadow: 0 6px 18px rgba(0,212,255,0.4);
+    color: white;
+}
+
+.empty-state {
+    text-align: center; padding: 80px 20px;
+    background: rgba(22,26,53,0.4);
+    border: 1px dashed rgba(0,212,255,0.3);
+    border-radius: 18px;
+}
+.empty-state i { font-size: 70px; color: var(--muted); opacity: 0.3; }
+</style>
+
+<script>
+var gridSignature = "";
+
+function fetchAll() {
+    fetch('/api/traffic-all')
+        .then(function(r) { return r.json(); })
+        .then(render)
+        .catch(function() {});
+}
+
+function render(data) {
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+    document.getElementById('swCount').textContent = data.count;
+
+    setText('totalIn', fmtBps(data.total_in));
+    setText('totalOut', fmtBps(data.total_out));
+    animateNumber(document.getElementById('totalAlerts'), data.alerts.length);
+
+    var list = document.getElementById('switchList');
+
+    if (!data.switches.length) {
+        if (gridSignature !== 'EMPTY') {
+            list.innerHTML = '<div class="col-12"><div class="empty-state">' +
+                '<i class="fa-solid fa-inbox"></i>' +
+                '<h4 class="mt-3">No Switches</h4>' +
+                '<p style="color:var(--muted);">Add a switch from the dashboard.</p>' +
+                '</div></div>';
+            gridSignature = 'EMPTY';
+        }
+        return;
+    }
+
+    var sigParts = [];
+    for (var i = 0; i < data.switches.length; i++) {
+        var s = data.switches[i];
+        sigParts.push([s.sw_id, s.name, s.ip, s.model, s.last_status].join('|'));
+    }
+    var sig = sigParts.join('||');
+
+    if (sig !== gridSignature) {
+        gridSignature = sig;
+        var html = '';
+        for (var j = 0; j < data.switches.length; j++) {
+            var sw = data.switches[j];
+            var statusCls = ['online','offline'].indexOf(sw.last_status) >= 0 ? sw.last_status : 'unknown';
+            var delay = Math.min(j * 0.05, 0.5);
+            html +=
+                '<div class="col-xl-4 col-lg-6 col-md-6" data-swcol="' + sw.sw_id + '">' +
+                    '<div class="sw-traffic-card" data-swid="' + sw.sw_id + '" style="animation-delay:' + delay + 's">' +
+                        '<div class="sw-name-row">' +
+                            '<div>' +
+                                '<div class="sw-name-t">' +
+                                    '<span class="sw-status-dot dot-' + statusCls + '"></span>' +
+                                    '<span class="col-name">' + escapeHTML(sw.name) + '</span>' +
+                                    '<span class="col-alert-slot"></span>' +
+                                '</div>' +
+                                '<div class="sw-ip-t">' + sw.ip + '</div>' +
+                            '</div>' +
+                            '<div style="font-size:10px; color:var(--muted); text-align:right;">' +
+                                escapeHTML(sw.model || '') + '<br>' +
+                                '<span class="mono col-age">—</span>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="traffic-big">' +
+                            '<span style="color:var(--success);">↓ <span class="col-tin">—</span></span>' +
+                            '<span style="color:var(--muted); font-size:14px;"> / </span>' +
+                            '<span style="color:var(--accent);">↑ <span class="col-tout">—</span></span>' +
+                        '</div>' +
+                        '<div class="traffic-row">' +
+                            '<span style="color:var(--muted);">Active Ports</span>' +
+                            '<span><b class="mono col-active">0</b>' +
+                            '<span style="color:var(--muted);"> / <span class="col-total">0</span></span></span>' +
+                        '</div>' +
+                        '<div class="tt-detail">' +
+                            '<span>🏆 Top Port</span>' +
+                            '<span class="col-top"><span style="color:var(--muted);">—</span></span>' +
+                        '</div>' +
+                        '<a href="/switch/' + sw.sw_id + '" class="sw-btn mt-3">' +
+                            '<i class="fa-solid fa-gauge-high me-1"></i>Open Details' +
+                        '</a>' +
+                    '</div>' +
+                '</div>';
+        }
+        list.innerHTML = html;
+    }
+
+    // In-place updates
+    data.switches.forEach(function(sw) {
+        var card = document.querySelector('.sw-traffic-card[data-swid="' + sw.sw_id + '"]');
+        if (!card) return;
+
+        var ageText = sw.age_sec != null ? sw.age_sec + 's ago' : 'no data';
+        setIn(card, '.col-age', ageText);
+        setIn(card, '.col-tin',  fmtBps(sw.total_in));
+        setIn(card, '.col-tout', fmtBps(sw.total_out));
+        setIn(card, '.col-active', sw.active_ports);
+        setIn(card, '.col-total', sw.total_ports);
+
+        var topEl = card.querySelector('.col-top');
+        if (topEl) {
+            var newHtml = sw.top_port
+                ? '<span class="mono" style="color:var(--primary);">' + escapeHTML(sw.top_port) + '</span> <span class="mono">' + fmtBps(sw.top_port_bps) + '</span>'
+                : '<span style="color:var(--muted);">—</span>';
+            if (topEl.innerHTML !== newHtml) topEl.innerHTML = newHtml;
+        }
+
+        var alertSlot = card.querySelector('.col-alert-slot');
+        if (alertSlot) {
+            var has = sw.alerts > 0;
+            var newHtml2 = has
+                ? '<span class="alert-badge"><i class="fa-solid fa-triangle-exclamation"></i> ' + sw.alerts + '</span>'
+                : '';
+            if (alertSlot.innerHTML !== newHtml2) alertSlot.innerHTML = newHtml2;
+            card.classList.toggle('has-alert', has);
+        }
+    });
+}
+
+function setIn(root, selector, text) {
+    var el = root.querySelector(selector);
+    if (el && el.textContent !== String(text)) el.textContent = String(text);
+}
+function setText(id, text) {
+    var el = document.getElementById(id);
+    if (el && el.textContent !== String(text)) el.textContent = String(text);
+}
+function escapeHTML(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(m) {
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
+    });
+}
+function fmtBps(bps) {
+    if (!bps) return '0 bps';
+    if (bps >= 1e9) return (bps / 1e9).toFixed(2) + ' Gbps';
+    if (bps >= 1e6) return (bps / 1e6).toFixed(2) + ' Mbps';
+    if (bps >= 1e3) return (bps / 1e3).toFixed(1) + ' Kbps';
+    return bps + ' bps';
+}
+
+fetchAll();
+setInterval(fetchAll, 3000);
+</script>
+{% endblock %}
