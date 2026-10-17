@@ -400,7 +400,12 @@ def parse_interfaces(running_config, status_output="", status_map=None):
             if "switchport trunk native vlan" in ll:
                 mode = "Trunk"
                 native = ll.split()[-1]
-                vlans = f"{vlans} (Native {native})" if vlans not in ("1", "All") else f"Native {native}"
+                if vlans == "All":
+                    vlans = f"All (Native {native})"
+                elif vlans == "1":
+                    vlans = f"Native {native}"
+                else:
+                    vlans = f"{vlans} (Native {native})"
 
             if ll in ("shutdown", "disable"):
                 is_shutdown = True

@@ -8,7 +8,7 @@
             <h3 class="mb-1"><i class="fa-solid fa-chart-line text-primary-glow me-2"></i>All Switches — Live Traffic</h3>
             <div style="color:var(--muted); font-size:13px;">
                 <i class="fa-solid fa-clock me-1"></i>
-                <span id="lastUpdate">—</span> •
+                Last Update: <b class="mono" id="lastUpdate" style="color:var(--primary);">—</b> •
                 <span id="swCount">0</span> switches •
                 Auto-refresh every 3s
             </div>
@@ -148,7 +148,12 @@ function fetchAll() {
 }
 
 function render(data) {
-    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+    // ---- Last update display ----
+    document.getElementById('lastUpdate').textContent =
+        new Date().toLocaleString('en-GB', {
+            day: '2-digit', month: 'short',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
     document.getElementById('swCount').textContent = data.count;
 
     setText('totalIn', fmtBps(data.total_in));
@@ -228,10 +233,24 @@ function render(data) {
         var card = document.querySelector('.sw-traffic-card[data-swid="' + sw.sw_id + '"]');
         if (!card) return;
 
-        var ageText = sw.age_sec != null ? sw.age_sec + 's ago' : 'no data';
+        var ageText = sw.age_sec != null ? sw.age_sec + 's ago' : 'no live data';
         setIn(card, '.col-age', ageText);
-        setIn(card, '.col-tin',  fmtBps(sw.total_in));
-        setIn(card, '.col-tout', fmtBps(sw.total_out));
+
+        // live bps থাকলে bps, না থাকলে 24h bytes
+        var hasLive = (sw.total_in > 0) || (sw.total_out > 0);
+        var has24h  = (sw.bytes_24h || 0) > 0;
+
+        if (hasLive) {
+            setIn(card, '.col-tin',  fmtBps(sw.total_in));
+            setIn(card, '.col-tout', fmtBps(sw.total_out));
+        } else if (has24h) {
+            setIn(card, '.col-tin',  '24h ' + fmtBytes(sw.bytes_in_24h || 0));
+            setIn(card, '.col-tout', '24h ' + fmtBytes(sw.bytes_out_24h || 0));
+        } else {
+            setIn(card, '.col-tin',  '—');
+            setIn(card, '.col-tout', '—');
+        }
+
         setIn(card, '.col-active', sw.active_ports);
         setIn(card, '.col-total', sw.total_ports);
 
@@ -275,6 +294,14 @@ function fmtBps(bps) {
     if (bps >= 1e6) return (bps / 1e6).toFixed(2) + ' Mbps';
     if (bps >= 1e3) return (bps / 1e3).toFixed(1) + ' Kbps';
     return bps + ' bps';
+}
+function fmtBytes(bytes) {
+    if (!bytes) return '0 B';
+    var units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    var i = 0;
+    var v = bytes;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2) + ' ' + units[i];
 }
 
 fetchAll();

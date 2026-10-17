@@ -9,10 +9,56 @@ services:
     volumes:
       - netscan_data:/app/data
     environment:
+      # ---- Core ----
       - DB_FILE=/app/data/switches.db
       - TZ=Asia/Dhaka
-    # SNMP outbound uses UDP 161 (no mapping needed)
-    # SSH outbound uses TCP 22 (no mapping needed)
+      - FLASK_SECRET=${FLASK_SECRET:-cisco_secret_key_change_this}
+
+      # ---- Core Network Auth ----
+      - CORE_USER=${CORE_USER:-admin}
+      - CORE_PASS=${CORE_PASS:-CoreNet@2026}
+      - CORE_SECRET=${CORE_SECRET:-core_network_secret_change_me}
+
+      # ---- SSH credentials (for switch scanning) ----
+      - SW_USER=${SW_USER:-root}
+      - SW_PASS=${SW_PASS:-WhqAcc*&^8u7y}
+      - SW_ENABLE_PASS=${SW_ENABLE_PASS:-WhqAcc*&^8u7y}
+      - SW_PORT=${SW_PORT:-22}
+
+      # ---- Scan queue ----
+      - SCAN_MAX_CONCURRENT=${SCAN_MAX_CONCURRENT:-8}
+
+      # ---- SNMP base ----
+      - SNMP_COMMUNITY=${SNMP_COMMUNITY:-WhilDc321}
+      - SNMP_VERSION=${SNMP_VERSION:-2}          # 2=v2c (fast), 1=v1
+      - SNMP_TIMEOUT=${SNMP_TIMEOUT:-1.5}
+      - SNMP_RETRIES=${SNMP_RETRIES:-1}
+      - SNMP_BACKOFF_BASE=${SNMP_BACKOFF_BASE:-30}
+      - SNMP_BACKOFF_MAX=${SNMP_BACKOFF_MAX:-600}    
+      - SNMP_ALERT_PCT=${SNMP_ALERT_PCT:-80}
+
+      # ---- Live poller (on-demand, per-switch) ----
+      - SNMP_INTERVAL=${SNMP_INTERVAL:-5}
+      - SNMP_ENABLE_TTL=${SNMP_ENABLE_TTL:-300}
+      - SNMP_WORKERS=${SNMP_WORKERS:-16}
+      - SNMP_SAVE_EVERY=${SNMP_SAVE_EVERY:-60}
+      - SNMP_HISTORY=${SNMP_HISTORY:-60}
+      - SNMP_STATIC_TTL=${SNMP_STATIC_TTL:-300}
+
+      # ---- Accounting poller (always-on, low-freq, batch) ----
+      - SNMP_ACCOUNT_INTERVAL=${SNMP_ACCOUNT_INTERVAL:-600}       # 10 min
+      - SNMP_ACCOUNT_WORKERS=${SNMP_ACCOUNT_WORKERS:-12}
+      - SNMP_ACCOUNT_BATCH=${SNMP_ACCOUNT_BATCH:-40}
+      - SNMP_ACCOUNT_START_DELAY=${SNMP_ACCOUNT_START_DELAY:-60}
+      - SNMP_NAMES_TTL=${SNMP_NAMES_TTL:-3600}
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
     networks:
       - netscan_net
 

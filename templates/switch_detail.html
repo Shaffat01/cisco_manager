@@ -77,11 +77,11 @@
     <main class="cyber-main">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h3 class="mb-1">{{ sw.name }} 
+                <h3 class="mb-1">{{ sw.name }}
                     <span class="model-badge ms-2">{{ sw.model }}</span>
                 </h3>
                 <div style="color:var(--muted); font-size:14px;">
-                    <i class="fa-solid fa-globe me-1"></i>{{ sw.ip }} • 
+                    <i class="fa-solid fa-globe me-1"></i>{{ sw.ip }} •
                     <i class="fa-solid fa-clock me-1 ms-2"></i>Real-time Data
                 </div>
             </div>
@@ -317,9 +317,65 @@
 .totals-24h-box { margin-top: 15px; }
 .totals-24h-rank { color: var(--muted); font-family: 'JetBrains Mono', monospace; }
 
+/* ---- SNMP status bar ---- */
+.snmp-status-bar { margin-bottom: 18px; }
+.snmp-on, .snmp-off {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px; border-radius: 12px;
+    font-size: 13px; font-weight: 600;
+}
+.snmp-on {
+    background: linear-gradient(135deg, rgba(0,245,160,0.12), rgba(0,212,255,0.08));
+    border: 1px solid rgba(0,245,160,0.35);
+    box-shadow: 0 0 20px rgba(0,245,160,0.15);
+}
+.snmp-off {
+    background: rgba(100,116,139,0.12);
+    border: 1px solid rgba(100,116,139,0.3);
+}
+.snmp-on .snmp-countdown {
+    margin-left: auto; color: var(--success);
+    font-family: 'JetBrains Mono', monospace;
+}
+.btn-off, .btn-on {
+    padding: 8px 18px; border-radius: 8px; font-size: 12px;
+    font-weight: 700; cursor: pointer; border: none;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all 0.25s;
+}
+.btn-on {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white; margin-left: auto;
+    box-shadow: 0 4px 15px rgba(0,212,255,0.4);
+}
+.btn-on:hover { transform: translateY(-2px);
+    box-shadow: 0 6px 22px rgba(0,212,255,0.6); }
+.btn-off {
+    background: rgba(255,56,96,0.15);
+    color: var(--danger); border: 1px solid rgba(255,56,96,0.4);
+}
+.btn-off:hover { background: rgba(255,56,96,0.28); }
+
+.disabled-placeholder {
+    text-align: center; padding: 70px 20px;
+    background: rgba(26,31,58,0.4);
+    border: 1px dashed rgba(0,212,255,0.25);
+    border-radius: 16px;
+}
+.disabled-placeholder i {
+    font-size: 64px; color: var(--muted); opacity: 0.35;
+}
+.disabled-placeholder h4 {
+    color: var(--light); margin-top: 18px; font-size: 18px;
+}
+.disabled-placeholder p {
+    color: var(--muted); margin-top: 8px; font-size: 13px;
+}
+
 @media print {
     .cyber-sidebar, .top-nav, .traffic-controls, #scanBtn,
-    .range-buttons, .export-buttons, #queueBanner, #alertBanner { display: none !important; }
+    .range-buttons, .export-buttons, #queueBanner, #alertBanner,
+    .snmp-status-bar { display: none !important; }
     body { background: white !important; color: black !important; }
     .cyber-table { background: white; border-color: #ccc; }
     .cyber-table thead th, .cyber-table tbody td { color: black !important;
@@ -336,6 +392,8 @@ let currentSection = 'overview';
 let pollTimer = null;
 let trafficTimer = null;
 let usageTrafficTimer = null;
+let countdownTimer = null;
+let autoEnableDone = false;
 
 // Chart state
 let chartInstance = null;
@@ -343,9 +401,10 @@ let currentRange = '5m';
 let currentPort  = null;
 let allPorts = [];
 
-// Traffic page state (flicker-free)
+// Traffic page state
 let trafficBuilt = false;
 let chartInitDone = false;
+let lastSnmpEnabled = null;
 
 // ============================================================
 // NAVIGATION
@@ -355,15 +414,15 @@ document.querySelectorAll('.nav-link').forEach(item => {
         e.preventDefault();
         clearInterval(trafficTimer);      trafficTimer = null;
         clearInterval(usageTrafficTimer); usageTrafficTimer = null;
+        clearInterval(countdownTimer);    countdownTimer = null;
 
         document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
         item.classList.add('active');
         currentSection = item.dataset.section;
 
-        // Any nav click invalidates the traffic page structure
         trafficBuilt = false;
         chartInitDone = false;
-        window._chartInitDone = false;
+        lastSnmpEnabled = null;
 
         if (currentSection === 'traffic') {
             onNavToTraffic();
@@ -385,7 +444,6 @@ function showScanPanel() {
     document.getElementById('scanProgress').style.display = 'block';
     document.getElementById('content').innerHTML = '';
     trafficBuilt = false;
-    window._chartInitDone = false;
 }
 function hideScanPanel(delay) {
     setTimeout(() => {
@@ -435,7 +493,6 @@ function pollScanStatus() {
                 showToast('✓ Scan completed successfully!', 'success');
                 resetScanButton(); hideScanPanel(1200);
                 trafficBuilt = false;
-                window._chartInitDone = false;
                 if (currentSection === 'traffic') onNavToTraffic();
                 else loadSection(currentSection);
             } else if (job.status === 'error') {
@@ -448,7 +505,7 @@ function pollScanStatus() {
 }
 
 // ============================================================
-// SECTION LOADER (non-traffic sections)
+// SECTION LOADER
 // ============================================================
 async function loadSection(section) {
     document.getElementById('loader').style.display = 'block';
@@ -527,7 +584,7 @@ function renderSection(section, data) {
             <div class="col-md-4"><div class="stat-card" style="border-left-color:var(--muted);"><div class="stat-label">Unused Ports</div><div class="stat-value" style="font-size:36px; color:var(--muted);">${p.unused.length}</div></div></div>
             <div class="col-md-4"><div class="stat-card" style="border-left-color:var(--primary);"><div class="stat-label">Total Ports</div><div class="stat-value text-primary-glow" style="font-size:36px;">${p.total}</div></div></div>
         </div>`;
-        html += `<h4 class="section-title" style="color:var(--success);">🟢 Active/Used Ports <small style="color:var(--muted); font-size:11px; letter-spacing:0;">(live • refresh every 2s)</small></h4>`;
+        html += `<h4 class="section-title" style="color:var(--success);">🟢 Active/Used Ports</h4>`;
         html += `<table class="cyber-table"><thead><tr>
                     <th>Port</th><th>Name</th><th>Status</th><th>VLAN</th>
                     <th style="text-align:right;">Live Bandwidth</th>
@@ -538,7 +595,7 @@ function renderSection(section, data) {
                 <td>${i.name}</td>
                 <td><span class="status-pill pill-up">${i.status}</span></td>
                 <td>${i.vlan}</td>
-                <td class="bw-cell mono" style="text-align:right; color:var(--muted);">…</td>
+                <td class="bw-cell mono" style="text-align:right; color:var(--muted);">SNMP off</td>
             </tr>`;
         });
         html += `</tbody></table>`;
@@ -630,27 +687,46 @@ function sparkline(samples, width = 140, height = 28) {
 }
 
 // ============================================================
-// LIVE TRAFFIC PAGE — FLICKER-FREE
+// LIVE TRAFFIC PAGE — with AUTO-ENABLE
 // ============================================================
-function onNavToTraffic() {
+async function onNavToTraffic() {
     clearInterval(trafficTimer);
+
     if (!trafficBuilt) {
-        buildTrafficPage().then(() => {
-            refreshTrafficData();
-        });
-    } else {
-        refreshTrafficData();
+        await buildTrafficPage();
     }
+
+    // AUTO-ENABLE if not already enabled (only once per page load)
+    if (!autoEnableDone) {
+        autoEnableDone = true;
+        try {
+            const sres = await fetch(`/api/traffic/${SW_ID}/state`);
+            const state = await sres.json();
+            if (!state.enabled) {
+                console.log('[auto] Enabling SNMP for sw', SW_ID);
+                await fetch(`/api/traffic/${SW_ID}/enable`, { method: 'POST' });
+            }
+        } catch (e) { console.error('auto-enable error', e); }
+    }
+
+    refreshTrafficData();
     trafficTimer = setInterval(refreshTrafficData, 2000);
 }
 
 async function buildTrafficPage() {
     const content = document.getElementById('content');
-    const loader = document.getElementById('loader');
+    const loader  = document.getElementById('loader');
     if (loader) loader.style.display = 'none';
 
     content.innerHTML = `
       <div id="trafficPageRoot">
+        <div id="snmpStatusBar" class="snmp-status-bar">
+            <div class="snmp-off">
+                <i class="fa-solid fa-circle-notch spinning" style="color:var(--muted);"></i>
+                <span>Checking SNMP state...</span>
+            </div>
+        </div>
+
         <div id="trafficAlertSlot"></div>
         <div class="last-scan" id="trafficLastScan">
             <i class="fa-solid fa-satellite-dish spinning me-1"></i> Collecting SNMP data…
@@ -720,25 +796,118 @@ async function buildTrafficPage() {
       </div>
     `;
     trafficBuilt = true;
+}
 
-    // Load 24h totals ONCE
-    load24hTotals();
+// ---- SNMP status bar ----
+function renderSnmpStatus(state) {
+    const bar = document.getElementById('snmpStatusBar');
+    if (!bar) return;
+
+    if (state && state.enabled) {
+        bar.innerHTML = `
+            <div class="snmp-on">
+                <i class="fa-solid fa-satellite-dish" style="color:var(--success);"></i>
+                <span style="color:var(--success);">SNMP Polling Active</span>
+                <span class="snmp-countdown" id="snmpCountdown">Auto-off in —:—</span>
+                <button class="btn-off" onclick="disableSnmp()">
+                    <i class="fa-solid fa-power-off"></i>Turn OFF
+                </button>
+            </div>`;
+        startCountdown(state.remaining);
+    } else {
+        bar.innerHTML = `
+            <div class="snmp-off">
+                <i class="fa-solid fa-satellite-dish" style="color:var(--muted);"></i>
+                <span style="color:var(--muted);">SNMP Polling is OFF</span>
+                <button class="btn-on" onclick="enableSnmp()">
+                    <i class="fa-solid fa-play"></i>Enable SNMP (5 min)
+                </button>
+            </div>`;
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+    }
+}
+
+function startCountdown(seconds) {
+    clearInterval(countdownTimer);
+    let remaining = seconds;
+    updateCountdownDisplay(remaining);
+    countdownTimer = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+            const el = document.getElementById('snmpCountdown');
+            if (el) el.textContent = 'Auto-off...';
+            setTimeout(refreshTrafficData, 500);
+            return;
+        }
+        updateCountdownDisplay(remaining);
+    }, 1000);
+}
+
+function updateCountdownDisplay(seconds) {
+    const el = document.getElementById('snmpCountdown');
+    if (!el) return;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    el.textContent = `Auto-off in ${m}:${String(s).padStart(2, '0')}`;
+}
+
+async function enableSnmp() {
+    try {
+        const r = await fetch(`/api/traffic/${SW_ID}/enable`, { method: 'POST' });
+        const d = await r.json();
+        if (d.status === 'ok') {
+            showToast('SNMP polling enabled (auto-off in 5 min)', 'success');
+            chartInitDone = false;
+            lastSnmpEnabled = null;
+            refreshTrafficData();
+        } else {
+            showToast(d.message || 'Failed to enable SNMP', 'danger');
+        }
+    } catch (e) {
+        showToast('Error: ' + e.message, 'danger');
+    }
+}
+
+async function disableSnmp() {
+    try {
+        await fetch(`/api/traffic/${SW_ID}/disable`, { method: 'POST' });
+        showToast('SNMP polling stopped', 'info');
+        refreshTrafficData();
+    } catch (e) {
+        showToast('Error: ' + e.message, 'danger');
+    }
 }
 
 async function refreshTrafficData() {
     if (!trafficBuilt) return;
     if (!document.getElementById('trafficPageRoot')) return;
 
-    let data, history;
+    let data;
     try {
-        const [rTraffic, rHistory] = await Promise.all([
-            fetch(`/api/traffic/${SW_ID}`),
-            fetch(`/api/traffic/${SW_ID}/history`),
-        ]);
-        data = await rTraffic.json();
-        const histResp = await rHistory.json();
-        history = histResp.status === 'ok' ? histResp.history : {};
+        const r = await fetch(`/api/traffic/${SW_ID}`);
+        data = await r.json();
     } catch (e) { return; }
+
+    // Update status bar
+    renderSnmpStatus(data.state);
+
+    // ---- Disabled ----
+    if (data.status === 'disabled') {
+        lastSnmpEnabled = false;
+        setText('tcTotalIn', '—');
+        setText('tcTotalOut', '—');
+        setText('tcActivePorts', '—');
+        return;
+    }
+
+    // First enable → load 24h totals once
+    if (data.state && data.state.enabled && lastSnmpEnabled !== true) {
+        lastSnmpEnabled = true;
+        load24hTotals();
+    }
 
     // ---- Warming up ----
     if (data.status === 'warming_up') {
@@ -755,11 +924,10 @@ async function refreshTrafficData() {
     const totalIn  = ports.reduce((s, p) => s + p.in_bps,  0);
     const totalOut = ports.reduce((s, p) => s + p.out_bps, 0);
 
-    // ---- Last scan text ----
     const el = document.getElementById('trafficLastScan');
     if (el) el.innerHTML = `<i class="fa-solid fa-clock me-1"></i> Live • updated ${data.age_sec}s ago • <span class="mono">${escapeHTML(data.sw_ip)}</span>`;
 
-    // ---- Alert banner ----
+    // Alert banner
     const alertSlot = document.getElementById('trafficAlertSlot');
     if (alertSlot) {
         const highUtil = ports.filter(p => Math.max(p.in_util_pct, p.out_util_pct) >= 80);
@@ -781,12 +949,12 @@ async function refreshTrafficData() {
         }
     }
 
-    // ---- Stat cards ----
+    // Stat cards
     setText('tcTotalIn',    fmtBps(totalIn));
     setText('tcTotalOut',   fmtBps(totalOut));
     setText('tcActivePorts', ports.length);
 
-    // ---- Top Talkers (rebuild cards only — only 5) ----
+    // Top talkers
     const ttGrid = document.getElementById('topTalkersGrid');
     if (ttGrid) {
         const top = (data.top_talkers || []).filter(p => (p.in_bps + p.out_bps) > 0);
@@ -813,11 +981,10 @@ async function refreshTrafficData() {
         }
     }
 
-    // ---- Port table (build once, then update in place) ----
+    // Port table
     const tableWrap = document.getElementById('portTableWrap');
     if (tableWrap) {
         const newSig = ports.map(p => p.name).join('|');
-
         if (tableWrap.dataset.signature !== newSig) {
             if (ports.length === 0) {
                 tableWrap.innerHTML = `<div class="alert" style="background:rgba(0,212,255,0.05); border:1px solid rgba(0,212,255,0.2); color:var(--light);">No active ports detected via SNMP.</div>`;
@@ -849,7 +1016,14 @@ async function refreshTrafficData() {
             tableWrap.dataset.signature = newSig;
         }
 
-        // In-place value updates
+        // History for sparklines
+        let history = {};
+        try {
+            const hr = await fetch(`/api/traffic/${SW_ID}/history`);
+            const hd = await hr.json();
+            if (hd.status === 'ok') history = hd.history;
+        } catch (e) {}
+
         for (const p of ports) {
             const tr = tableWrap.querySelector(`tr[data-port="${cssEscape(p.name)}"]`);
             if (!tr) continue;
@@ -887,7 +1061,7 @@ async function refreshTrafficData() {
         }
     }
 
-    // ---- Chart — initialise only ONCE with the first non-empty port list ----
+    // Chart init once
     if (!chartInitDone && ports.length > 0) {
         chartInitDone = true;
         initTrafficChart(ports);
@@ -898,14 +1072,12 @@ function setText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
 }
-
 function cssEscape(s) {
-    // Escape for querySelector attribute selector (simple)
     return String(s).replace(/[\\"]/g, '\\$&');
 }
 
 // ============================================================
-// 24-HOUR TOTAL BANDWIDTH PER PORT
+// 24-HOUR TOTALS
 // ============================================================
 async function load24hTotals() {
     const box = document.getElementById('totalsBox');
@@ -918,13 +1090,28 @@ async function load24hTotals() {
         if (data.status !== 'ok' || !data.ports.length) {
             box.innerHTML = `<div class="alert" style="background:rgba(0,212,255,0.05);
                 border:1px solid rgba(0,212,255,0.2); color:var(--light);">
-                No 24-hour data yet. Wait for DB samples to accumulate
-                (saved every 60 seconds).
+                No 24-hour data yet. Accounting poller saves every 10 minutes.
             </div>`;
             return;
         }
 
+        const covMin = Math.round((data.coverage_sec || 0) / 60);
+        const covText = covMin > 60
+            ? `${(covMin/60).toFixed(1)} h`
+            : `${covMin} min`;
+
         let html = '';
+
+        if (covMin < 60) {
+            html += `<div class="alert" style="background:rgba(255,170,0,0.08);
+                border:1px solid rgba(255,170,0,0.35); color:var(--light);
+                border-radius:10px; padding:10px 16px; margin-bottom:12px;
+                font-size:12px;">
+                <i class="fa-solid fa-circle-info" style="color:var(--warning);"></i>
+                Exact byte totals from accounting poller. Coverage: <b>${covText}</b>
+                (out of 24h). Values improve as data accumulates.
+            </div>`;
+        }
 
         html += `<div class="row g-3 mb-3">
             <div class="col-md-4">
@@ -1008,7 +1195,7 @@ async function load24hTotals() {
 }
 
 // ============================================================
-// TRAFFIC CHART (Chart.js) — initialised ONCE
+// TRAFFIC CHART
 // ============================================================
 function initTrafficChart(ports) {
     allPorts = ports.map(p => p.name);
@@ -1085,7 +1272,7 @@ function drawChart(points) {
         ctx.fillStyle = '#64748b';
         ctx.font = '14px Inter';
         ctx.textAlign = 'center';
-        ctx.fillText('No data for this range. Wait for DB samples to accumulate.',
+        ctx.fillText('No data for this range.',
                      canvas.width / 2, canvas.height / 2);
         return;
     }
@@ -1158,7 +1345,7 @@ function drawChart(points) {
 }
 
 // ============================================================
-// Used/Unused Ports — live bandwidth column
+// Used/Unused Ports live column
 // ============================================================
 function attachTrafficToUsageTable() {
     clearInterval(usageTrafficTimer);
@@ -1169,14 +1356,18 @@ function attachTrafficToUsageTable() {
         try {
             const r = await fetch(`/api/traffic/${SW_ID}`);
             const data = await r.json();
-            if (data.status !== 'ok') return;
-
+            if (data.status !== 'ok') {
+                document.querySelectorAll('tr[data-port] .bw-cell').forEach(c => {
+                    if (data.status === 'disabled') c.textContent = 'SNMP off';
+                    else c.textContent = '…';
+                });
+                return;
+            }
             const byNorm = {};
             data.ports.forEach(p => {
                 byNorm[p.name] = p;
                 if (p.descr) byNorm[p.descr.toLowerCase()] = p;
             });
-
             document.querySelectorAll('tr[data-port]').forEach(tr => {
                 const cell = tr.querySelector('.bw-cell');
                 if (!cell) return;
@@ -1217,10 +1408,7 @@ function fmtBytes(bytes) {
     const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
     let i = 0;
     let v = bytes;
-    while (v >= 1024 && i < units.length - 1) {
-        v /= 1024;
-        i++;
-    }
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
     return v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2) + ' ' + units[i];
 }
 function normalizePortJS(name) {
@@ -1238,7 +1426,10 @@ function showToast(msg, type) {
     })();
     const toast = document.createElement('div');
     toast.className = `flash-msg ${type}`;
-    toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check text-success-glow' : 'fa-circle-xmark text-danger-glow'}"></i><span>${msg}</span>`;
+    const icon = type === 'success' ? 'fa-circle-check text-success-glow'
+               : type === 'info'    ? 'fa-info-circle'
+                                    : 'fa-circle-xmark text-danger-glow';
+    toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${msg}</span>`;
     container.appendChild(toast);
     setTimeout(() => {
         toast.style.animation = 'slideInRight 0.4s reverse';

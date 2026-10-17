@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Core Network Login — NetScan Pro{% endblock %}
+{% block content %}
+<div style="min-height:calc(100vh - 70px); display:flex; align-items:center; justify-content:center; padding:40px 20px;">
+
+    <div class="glass-card" style="max-width:440px; width:100%; padding:44px 40px;">
+
+        <div style="text-align:center; margin-bottom:32px;">
+            <div style="width:80px; height:80px; margin:0 auto 18px;
+                        border-radius:50%;
+                        background:linear-gradient(135deg, rgba(124,58,237,0.25), rgba(0,212,255,0.2));
+                        border:2px solid rgba(124,58,237,0.5);
+                        display:flex; align-items:center; justify-content:center;
+                        box-shadow:0 0 40px rgba(124,58,237,0.35);">
+                <i class="fa-solid fa-shield-halved" style="font-size:36px; color:#c4b5fd;"></i>
+            </div>
+            <h2 style="margin:0; font-size:24px; font-weight:800; letter-spacing:-0.5px;">
+                Core Network Access
+            </h2>
+            <p style="color:var(--muted); font-size:13px; margin-top:8px;">
+                <i class="fa-solid fa-lock"></i>
+                Restricted area — authentication required
+            </p>
+        </div>
+
+        {% if error %}
+        <div style="background:rgba(255,56,96,0.12);
+                    border:1px solid rgba(255,56,96,0.4);
+                    border-radius:10px; padding:12px 16px;
+                    margin-bottom:20px; color:var(--danger);
+                    font-size:13px; display:flex; align-items:center; gap:10px;">
+            <i class="fa-solid fa-circle-exclamation" style="font-size:18px;"></i>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <form method="POST">
+            <input type="hidden" name="next" value="{{ next_url or '' }}">
+
+            <div style="margin-bottom:18px;">
+                <label style="display:block; font-size:11px; text-transform:uppercase;
+                              letter-spacing:2px; color:var(--primary);
+                              font-weight:700; margin-bottom:8px;">
+                    <i class="fa-solid fa-user"></i> Username
+                </label>
+                <input type="text" name="username" required autofocus autocomplete="username"
+                       placeholder="admin"
+                       class="cyber-input"
+                       style="width:100%; background:var(--dark-3);
+                              border:1px solid rgba(0,212,255,0.2);
+                              color:white; padding:13px 16px;
+                              border-radius:10px; font-size:14px;
+                              outline:none; font-family:'JetBrains Mono', monospace;">
+            </div>
+
+            <div style="margin-bottom:24px;">
+                <label style="display:block; font-size:11px; text-transform:uppercase;
+                              letter-spacing:2px; color:var(--primary);
+                              font-weight:700; margin-bottom:8px;">
+                    <i class="fa-solid fa-key"></i> Password
+                </label>
+                <input type="password" name="password" required autocomplete="current-password"
+                       placeholder="••••••••••••"
+                       class="cyber-input"
+                       style="width:100%; background:var(--dark-3);
+                              border:1px solid rgba(0,212,255,0.2);
+                              color:white; padding:13px 16px;
+                              border-radius:10px; font-size:14px;
+                              outline:none; font-family:'JetBrains Mono', monospace;">
+            </div>
+
+            <button type="submit" class="btn-neon"
+                    style="width:100%; justify-content:center; padding:14px;
+                           font-size:14px; margin-bottom:14px;">
+                <i class="fa-solid fa-right-to-bracket"></i>
+                Login to Core Network
+            </button>
+
+            <a href="/" class="btn-outline-neon"
+               style="width:100%; justify-content:center; padding:12px; font-size:13px;
+                      text-decoration:none;">
+                <i class="fa-solid fa-arrow-left"></i>Back to Dashboard
+            </a>
+        </form>
+
+        <div style="margin-top:24px; padding-top:20px;
+                    border-top:1px solid rgba(0,212,255,0.15);
+                    font-size:11px; color:var(--muted); text-align:center;
+                    line-height:1.6;">
+            <i class="fa-solid fa-circle-info"></i>
+            Session expires after 8 hours of inactivity.
+            <br>Credentials are set via server environment variables.
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+.cyber-input:focus {
+    border-color: var(--secondary) !important;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.25) !important;
+}
+</style>
+{% endblock %}

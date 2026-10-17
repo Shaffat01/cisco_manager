@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+{% block title %}Core Network — NetScan Pro{% endblock %}
+{% block content %}
+<div class="container-fluid p-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">
+                <i class="fa-solid fa-shield-halved" style="color:#c4b5fd;"></i>
+                Core Network
+                <span style="font-size:11px; color:var(--muted);
+                             text-transform:uppercase; letter-spacing:2px;
+                             padding:4px 10px; border-radius:12px;
+                             background:rgba(124,58,237,0.15);
+                             border:1px solid rgba(124,58,237,0.3);
+                             margin-left:10px; vertical-align:middle;">
+                    <i class="fa-solid fa-lock"></i> RESTRICTED
+                </span>
+            </h3>
+            <div style="color:var(--muted); font-size:13px;">
+                <i class="fa-solid fa-user-check"></i>
+                Logged in as <b class="mono" style="color:#c4b5fd;">{{ core_user }}</b> •
+                <i class="fa-solid fa-clock me-1"></i>
+                Last Update: <b class="mono" id="lastUpdate" style="color:var(--primary);">—</b> •
+                <span id="swCount">0</span> core devices
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn-neon" data-bs-toggle="modal" data-bs-target="#addCoreModal" style="text-decoration:none;">
+                <i class="fa-solid fa-plus"></i>Add Device
+            </button>
+            
+            <button onclick="fetchCore()" class="btn-outline-neon" style="text-decoration:none;">
+                <i class="fa-solid fa-rotate"></i>Refresh
+            </button>
+            <a href="/core/logout" class="btn-outline-neon"
+               style="border-color:rgba(255,56,96,0.4); color:var(--danger); text-decoration:none;">
+                <i class="fa-solid fa-right-from-bracket"></i>Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="glass-card" style="border-left:4px solid #c4b5fd; padding:18px 22px;">
+                <div class="stat-lbl">Core Devices</div>
+                <h2 class="mono stat-num" id="statCount" style="color:#c4b5fd;">0</h2>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="glass-card" style="border-left:4px solid var(--success); padding:18px 22px;">
+                <div class="stat-lbl">Ingress (Live)</div>
+                <h2 class="mono stat-num text-success-glow" id="statIn" style="font-size:22px;">0 bps</h2>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="glass-card" style="border-left:4px solid var(--accent); padding:18px 22px;">
+                <div class="stat-lbl">Egress (Live)</div>
+                <h2 class="mono stat-num" id="statOut" style="color:var(--accent); font-size:22px;">0 bps</h2>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="glass-card" style="border-left:4px solid var(--primary); padding:18px 22px;">
+                <div class="stat-lbl">24h Total</div>
+                <h2 class="mono stat-num text-primary-glow" id="stat24h" style="font-size:22px;">0 B</h2>
+            </div>
+        </div>
+    </div>
+
+    <div id="coreList" class="row g-3"></div>
+
+    <div id="emptyState" style="display:none;">
+        <div style="text-align:center; padding:70px 20px;
+                    background:rgba(22,26,53,0.4);
+                    border:1px dashed rgba(124,58,237,0.3);
+                    border-radius:18px;">
+            <i class="fa-solid fa-shield-halved" style="font-size:70px; color:#c4b5fd; opacity:0.25;"></i>
+            <h4 class="mt-3" style="color:var(--light);">No Core Devices Configured</h4>
+            <p style="color:var(--muted); margin-top:8px;">
+                Click "Add Device" to assign a switch to the Core Network.
+            </p>
+        </div>
+    </div>
+
+</div>
+
+<style>
+.stat-lbl { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+.stat-num { font-size: 28px; font-weight: 800; margin: 6px 0 0; letter-spacing: -0.5px; }
+
+.core-card {
+    background: rgba(22,26,53,0.65);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 16px;
+    padding: 20px;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+}
+.core-card::before {
+    content: '';
+    position: absolute; top:0; left:0; right:0; height:3px;
+    background: linear-gradient(90deg, transparent, #c4b5fd, transparent);
+    opacity: 0.6;
+}
+.core-card:hover {
+    border-color: rgba(196,181,253,0.6);
+    transform: translateY(-4px);
+    box-shadow: 0 18px 48px rgba(124,58,237,0.25);
+}
+.core-title { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+.core-name { font-size: 15px; font-weight: 700; color: white; }
+.core-ip { font-family:'JetBrains Mono', monospace; color: #c4b5fd; font-size: 12px; margin-top: 2px; }
+.core-status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; vertical-align:middle; }
+.core-status-dot.online { background: var(--success); box-shadow: 0 0 10px var(--success); }
+.core-status-dot.offline { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.core-status-dot.unknown { background: var(--muted); }
+.core-status-dot.snmp-only { background: var(--primary); box-shadow: 0 0 10px var(--primary); }
+.core-big { font-family:'JetBrains Mono', monospace; font-size: 17px; font-weight: 800; margin: 12px 0; letter-spacing:-0.5px; }
+.core-row { display:flex; justify-content:space-between; font-size: 11px; color: var(--muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(124,58,237,0.15); }
+.core-actions { display:flex; gap:8px; margin-top: 14px; }
+.core-btn {
+    flex:1; text-align:center; padding:8px 12px; border-radius: 9px;
+    font-size: 12px; font-weight: 600; text-decoration:none;
+    background: linear-gradient(135deg, var(--secondary), var(--primary));
+    color: white; transition: all 0.2s;
+}
+.core-btn:hover { transform: translate3d(0,-1px,0); box-shadow: 0 6px 18px rgba(124,58,237,0.5); color: white; }
+.core-btn-del {
+    background: rgba(255,56,96,0.15); color: var(--danger);
+    border: 1px solid rgba(255,56,96,0.4);
+    padding: 8px 12px; border-radius: 9px;
+    font-size: 12px; cursor: pointer;
+    transition: all 0.2s;
+}
+.core-btn-del:hover { background: rgba(255,56,96,0.3); }
+</style>
+{% endblock %}
+
+{% block modals %}
+<div class="modal fade" id="addCoreModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cyber-modal">
+            <div class="modal-header">
+                <h5 class="text-primary-glow mb-0"><i class="fa-solid fa-shield-halved me-2"></i>Add Switch to Core</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--muted); font-size:13px;">Select a switch to hide from the normal dashboard and show here.</p>
+                <select id="availableSwitches" class="cyber-select" style="width:100%; padding:12px; background:var(--dark-3); color:white; border:1px solid rgba(0,212,255,0.2); border-radius:10px; outline:none;">
+                    <option value="">Loading switches...</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-outline-neon" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn-neon" onclick="addToCore()">Add to Core</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- ⚠️ স্ক্রিপ্ট এখন এখানে, তাই মোডাল লোড হওয়ার পর এটি রান হবে -->
+{% block scripts %}
+<script>
+document.getElementById('addCoreModal').addEventListener('show.bs.modal', function () {
+    var sel = document.getElementById('availableSwitches');
+    sel.innerHTML = '<option value="">Loading...</option>';
+    
+    fetch('/api/core/available')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.switches || data.switches.length === 0) {
+                sel.innerHTML = '<option value="">No available switches</option>';
+                return;
+            }
+            var html = '<option value="">— Select a switch —</option>';
+            data.switches.forEach(function(sw) {
+                html += '<option value="' + sw.id + '">' + sw.name + ' (' + sw.ip + ')</option>';
+            });
+            sel.innerHTML = html;
+        })
+        .catch(function() {
+            sel.innerHTML = '<option value="">Error loading</option>';
+        });
+});
+
+function addToCore() {
+    var swId = document.getElementById('availableSwitches').value;
+    if (!swId) return;
+
+    fetch('/api/core/mark/' + swId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_core: true })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.status === 'ok') {
+            bootstrap.Modal.getInstance(document.getElementById('addCoreModal')).hide();
+            fetchCore(); // রিফ্রেশ
+        } else {
+            alert('Failed to add switch');
+        }
+    });
+}
+
+function fetchCore() {
+    fetch('/api/core/switches')
+        .then(function(r) {
+            if (r.status === 401) {
+                window.location.href = '/core/login';
+                return null;
+            }
+            return r.json();
+        })
+        .then(function(data) {
+            if (!data) return;
+            render(data);
+        })
+        .catch(function() {});
+}
+
+function render(data) {
+    document.getElementById('lastUpdate').textContent =
+        new Date().toLocaleString('en-GB', {
+            day:'2-digit', month:'short',
+            hour:'2-digit', minute:'2-digit', second:'2-digit'
+        });
+    document.getElementById('swCount').textContent = data.count;
+    document.getElementById('statCount').textContent = data.count;
+    document.getElementById('statIn').textContent  = fmtBps(data.total_in);
+    document.getElementById('statOut').textContent = fmtBps(data.total_out);
+    document.getElementById('stat24h').textContent = fmtBytes(data.bytes_24h_total || 0);
+
+    var list = document.getElementById('coreList');
+    var empty = document.getElementById('emptyState');
+
+    if (!data.switches.length) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+
+    var html = '';
+    data.switches.forEach(function(sw) {
+        var hasLive = (sw.total_in > 0) || (sw.total_out > 0);
+        var has24h  = (sw.bytes_24h || 0) > 0;
+
+        var dotCls = 'unknown';
+        var statusLabel = 'UNKNOWN';
+        if (sw.last_status === 'online') {
+            dotCls = 'online'; statusLabel = 'ONLINE';
+        } else if (has24h || sw.snmp_enabled) {
+            dotCls = 'snmp-only'; statusLabel = 'SNMP ACTIVE';
+        } else if (sw.last_status === 'offline') {
+            dotCls = 'offline'; statusLabel = 'OFFLINE';
+        }
+
+        var liveHtml = '';
+        if (hasLive) {
+            liveHtml =
+                '<div class="core-big">' +
+                    '<span style="color:var(--success);">↓ ' + fmtBps(sw.total_in) + '</span>' +
+                    ' / ' +
+                    '<span style="color:var(--accent);">↑ ' + fmtBps(sw.total_out) + '</span>' +
+                '</div>';
+        } else if (has24h) {
+            liveHtml =
+                '<div class="core-big">' +
+                    '<span style="color:var(--success);">24h ↓ ' + fmtBytes(sw.bytes_in_24h) + '</span>' +
+                    ' / ' +
+                    '<span style="color:var(--accent);">↑ ' + fmtBytes(sw.bytes_out_24h) + '</span>' +
+                '</div>';
+        } else {
+            liveHtml = '<div class="core-big" style="color:var(--muted); font-size:13px;">No traffic data</div>';
+        }
+
+        html +=
+            '<div class="col-xl-4 col-lg-6 col-md-6">' +
+                '<div class="core-card ' + (sw.alerts > 0 ? 'has-alert' : '') + '">' +
+                    '<div class="core-title">' +
+                        '<div>' +
+                            '<div>' +
+                                '<span class="core-status-dot ' + dotCls + '"></span>' +
+                                '<span style="font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); font-weight:700;">' +
+                                    statusLabel +
+                                '</span>' +
+                            '</div>' +
+                            '<div class="core-name mt-1">' + escapeHTML(sw.name) + '</div>' +
+                            '<div class="core-ip"><i class="fa-solid fa-globe me-1"></i>' + sw.ip + '</div>' +
+                        '</div>' +
+                        '<i class="fa-solid fa-shield-halved" style="color:#c4b5fd; font-size:22px; opacity:0.6;"></i>' +
+                    '</div>' +
+
+                    liveHtml +
+
+                    '<div class="core-row">' +
+                        '<span>Active Ports</span>' +
+                        '<span><b class="mono">' + sw.active_ports + '</b> / ' + sw.total_ports + '</span>' +
+                    '</div>' +
+                    '<div class="core-row">' +
+                        '<span>Model</span>' +
+                        '<span class="mono">' + escapeHTML(sw.model || 'Unknown') + '</span>' +
+                    '</div>' +
+                    '<div class="core-row">' +
+                        '<span>Top Port</span>' +
+                        '<span>' +
+                            (sw.top_port
+                                ? '<span class="mono" style="color:var(--primary);">' + escapeHTML(sw.top_port) + '</span> <span class="mono">' + fmtBps(sw.top_port_bps) + '</span>'
+                                : '<span style="color:var(--muted);">—</span>') +
+                        '</span>' +
+                    '</div>' +
+
+                    '<div class="core-actions">' +
+                        '<a href="/switch/' + sw.sw_id + '" class="core-btn">' +
+                            '<i class="fa-solid fa-gauge-high me-1"></i>Open Details' +
+                        '</a>' +
+                        '<button class="core-btn-del" onclick="unmarkCore(' + sw.sw_id + ', \'' + escapeAttr(sw.name) + '\')" title="Remove from Core">' +
+                            '<i class="fa-solid fa-trash-can"></i>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    });
+    list.innerHTML = html;
+}
+
+function unmarkCore(swId, name) {
+    if (!confirm('Remove "' + name + '" from Core Network?')) return;
+    fetch('/api/core/mark/' + swId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_core: false })
+    }).then(function() {
+        fetchCore();
+    });
+}
+
+function escapeHTML(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(m) {
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
+    });
+}
+function escapeAttr(s) { return escapeHTML(s).replace(/'/g, "\\'"); }
+function fmtBps(bps) {
+    if (!bps) return '0 bps';
+    if (bps >= 1e9) return (bps / 1e9).toFixed(2) + ' Gbps';
+    if (bps >= 1e6) return (bps / 1e6).toFixed(2) + ' Mbps';
+    if (bps >= 1e3) return (bps / 1e3).toFixed(1) + ' Kbps';
+    return bps + ' bps';
+}
+function fmtBytes(b) {
+    if (!b) return '0 B';
+    var u = ['B','KB','MB','GB','TB','PB'], i = 0;
+    while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+    return b.toFixed(b >= 100 ? 0 : b >= 10 ? 1 : 2) + ' ' + u[i];
+}
+
+fetchCore();
+setInterval(fetchCore, 5000);
+</script>
+{% endblock %}

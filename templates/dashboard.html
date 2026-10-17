@@ -2,6 +2,21 @@
 {% block content %}
 <div class="container-fluid p-4">
 
+    <!-- ===== Last Update Banner ===== -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;
+                padding:10px 16px; background:rgba(0,212,255,0.05); border-radius:10px;
+                border:1px solid rgba(0,212,255,0.15);">
+        <div style="font-size:12px; color:var(--muted);">
+            <i class="fa-solid fa-sync-alt" style="color:var(--primary);"></i>
+            Dashboard Last Update: <b class="mono" id="dashLastUpdate" style="color:var(--primary);">—</b>
+        </div>
+        <div style="font-size:12px; color:var(--muted);">
+            <i class="fa-solid fa-clock"></i>
+            Next refresh in <b class="mono" id="dashNextRefresh" style="color:var(--success);">3</b>s
+        </div>
+    </div>
+
+    <!-- ===== Stat Tiles ===== -->
     <div class="row g-3 mb-4">
         <div class="col-md-3 col-6">
             <div class="glass-card stat-tile" data-filter-status="">
@@ -49,6 +64,7 @@
         </div>
     </div>
 
+    <!-- ===== Alerts ===== -->
     <div id="alertBanner" class="alert-banner" style="display:none;">
         <div class="d-flex align-items-center gap-3">
             <i class="fa-solid fa-triangle-exclamation" style="color:var(--danger); font-size:22px;"></i>
@@ -65,6 +81,7 @@
         </div>
     </div>
 
+    <!-- ===== Queue Banner ===== -->
     <div id="queueBanner" class="queue-banner" style="display:none;">
         <div class="d-flex align-items-center gap-3">
             <i class="fa-solid fa-circle-notch spinning" style="color:var(--primary); font-size:20px;"></i>
@@ -76,6 +93,7 @@
         </div>
     </div>
 
+    <!-- ===== Toolbar ===== -->
     <div class="toolbar glass-card mb-4">
         <div class="row g-2 align-items-center">
             <div class="col-lg-4 col-md-6">
@@ -119,6 +137,7 @@
         </div>
     </div>
 
+    <!-- ===== Bulk Bar ===== -->
     <div id="bulkBar" class="bulk-bar" style="display:none;">
         <div class="d-flex align-items-center gap-3">
             <span><b id="bulkCount">0</b> selected</span>
@@ -134,35 +153,11 @@
         </div>
     </div>
 
+    <!-- ===== Switch Grid ===== -->
     <div id="switchGrid" class="row g-3"></div>
 
     <div id="pagination" class="pagination-wrap"></div>
 
-</div>
-
-<div class="modal fade" id="csvModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content cyber-modal">
-            <div class="modal-header">
-                <h5 class="text-primary-glow mb-0"><i class="fa-solid fa-file-csv me-2"></i>Bulk Import Switches</h5>
-                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="/upload-csv" method="POST" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <p style="color:var(--muted); font-size:14px;">
-                        CSV Format: <code style="color:var(--primary);">name,ip,enable_pass</code>
-                    </p>
-                    <input type="file" name="csv_file" accept=".csv" required class="form-control cyber-input">
-                    <small class="text-muted mt-2 d-block">
-                        Global credentials apply to all switches automatically.
-                    </small>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn-neon"><i class="fa-solid fa-upload"></i>Upload</button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 
 <style>
@@ -323,10 +318,23 @@
 .sw-status-dot.offline  { background: var(--danger);  box-shadow: 0 0 8px var(--danger); }
 .sw-status-dot.scanning { background: var(--warning); box-shadow: 0 0 10px var(--warning); animation: dotPulse 1s ease-in-out infinite; }
 .sw-status-dot.unknown  { background: var(--muted); }
+.sw-status-dot.snmp-only{ background: var(--primary); box-shadow: 0 0 10px var(--primary); animation: dotPulse 2s var(--ease-in-out) infinite; }
 @keyframes dotPulse {
     0%, 100% { transform: scale(1); opacity: 1; }
     50%      { transform: scale(1.35); opacity: 0.75; }
 }
+
+.sw-status-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+}
+.sw-status-label.online    { color: var(--muted); }
+.sw-status-label.offline   { color: var(--muted); }
+.sw-status-label.scanning  { color: var(--muted); }
+.sw-status-label.unknown   { color: var(--muted); }
+.sw-status-label.snmp-only { color: var(--primary); }
 
 .sw-name { font-size: 15.5px; font-weight: 700; color: white; margin: 0; letter-spacing: -0.3px; }
 .sw-ip { font-family: 'JetBrains Mono', monospace; color: var(--primary); font-size: 12px; margin-top: 2px; }
@@ -512,12 +520,48 @@ function fetchTrafficAll() {
                 state.traffic[sw.sw_id] = {
                     in_bps:  sw.total_in,
                     out_bps: sw.total_out,
-                    alerts:  sw.alerts
+                    alerts:  sw.alerts,
+                    age_sec: sw.age_sec,
+                    bytes_24h:     sw.bytes_24h,
+                    bytes_in_24h:  sw.bytes_in_24h,
+                    bytes_out_24h: sw.bytes_out_24h,
+                    snmp_enabled:  sw.snmp_enabled
                 };
             }
             updateTrafficInPlace();
+
+            var now = new Date();
+            var luEl = document.getElementById('dashLastUpdate');
+            if (luEl) luEl.textContent = now.toLocaleTimeString();
+
+            var nx = document.getElementById('dashNextRefresh');
+            if (nx) nx.textContent = '3';
         })
         .catch(function() {});
+}
+
+function computeDisplayStatus(sw, traffic) {
+    var ssh = sw.last_status || 'unknown';
+    var live = sw.live_status;
+    var hasSnmpData = traffic && (traffic.bytes_24h > 0);
+    var snmpEnabled = traffic && traffic.snmp_enabled;
+
+    if (ssh === 'scanning' || live === 'running' || live === 'queued') {
+        return { cls: 'scanning', label: 'SCANNING' };
+    }
+    if (ssh === 'online') {
+        return { cls: 'online', label: 'ONLINE' };
+    }
+    if (ssh === 'offline' && hasSnmpData) {
+        return { cls: 'snmp-only', label: 'SNMP ONLY' };
+    }
+    if (ssh === 'offline') {
+        return { cls: 'offline', label: 'OFFLINE' };
+    }
+    if (ssh === 'unknown' && hasSnmpData) {
+        return { cls: 'snmp-only', label: 'SNMP ONLY' };
+    }
+    return { cls: 'unknown', label: 'NOT SCANNED' };
 }
 
 function renderGrid() {
@@ -553,15 +597,11 @@ function renderGrid() {
     for (var j = 0; j < state.switches.length; j++) {
         var sw = state.switches[j];
         var sel = state.selected.has(sw.id);
-        var live = sw.live_status;
-        var displayStatus = live === 'running' ? 'scanning'
-                          : live === 'queued'  ? 'scanning'
-                          : (sw.last_status || 'unknown');
-        var dotCls = ['online','offline','scanning'].indexOf(displayStatus) >= 0
-                    ? displayStatus : 'unknown';
-        var scanning = live === 'running';
-        var queued = live === 'queued';
+        var scanning = sw.live_status === 'running';
+        var queued = sw.live_status === 'queued';
         var delay = Math.min(j * 0.04, 0.4);
+
+        var init = computeDisplayStatus(sw, null);
 
         html +=
             '<div class="col-xl-3 col-lg-4 col-md-6" data-swcol="' + sw.id + '">' +
@@ -572,9 +612,9 @@ function renderGrid() {
                     '<div class="d-flex align-items-start mb-2">' +
                         '<div style="flex:1;">' +
                             '<div>' +
-                                '<span class="sw-status-dot ' + dotCls + '"></span>' +
-                                '<span style="font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); font-weight:700;">' +
-                                    displayStatus +
+                                '<span class="sw-status-dot ' + init.cls + ' col-status-dot"></span>' +
+                                '<span class="sw-status-label ' + init.cls + ' col-status-label">' +
+                                    init.label +
                                 '</span>' +
                                 '<span class="col-alert-slot"></span>' +
                             '</div>' +
@@ -590,6 +630,7 @@ function renderGrid() {
                     '<div class="sw-meta">' +
                         '<i class="fa-solid fa-clock me-1"></i>' +
                         (sw.last_scan_time ? escapeHTML(sw.last_scan_time) : 'Never scanned') +
+                        ' · <span class="col-age" style="color:var(--primary);">—</span>' +
                     '</div>' +
                     '<div class="col-progress-slot"></div>' +
                     '<div class="sw-actions">' +
@@ -616,9 +657,28 @@ function renderGrid() {
 function updateTrafficInPlace() {
     document.querySelectorAll('.sw-card[data-swid]').forEach(function(card) {
         var swId = parseInt(card.dataset.swid, 10);
+
+        var sw = null;
+        for (var i = 0; i < state.switches.length; i++) {
+            if (state.switches[i].id === swId) { sw = state.switches[i]; break; }
+        }
+
         var t = state.traffic[swId];
         var trafficSlot = card.querySelector('.col-traffic-slot');
         var alertSlot = card.querySelector('.col-alert-slot');
+
+        if (sw) {
+            var disp = computeDisplayStatus(sw, t);
+            var dotEl = card.querySelector('.col-status-dot');
+            var lblEl = card.querySelector('.col-status-label');
+            if (dotEl) {
+                dotEl.className = 'sw-status-dot ' + disp.cls + ' col-status-dot';
+            }
+            if (lblEl) {
+                if (lblEl.textContent !== disp.label) lblEl.textContent = disp.label;
+                lblEl.className = 'sw-status-label ' + disp.cls + ' col-status-label';
+            }
+        }
 
         if (!t) {
             if (trafficSlot) trafficSlot.style.display = 'none';
@@ -629,10 +689,32 @@ function updateTrafficInPlace() {
 
         if (trafficSlot) {
             trafficSlot.style.display = 'flex';
-            var tin = trafficSlot.querySelector('.col-tin');
+            var tin  = trafficSlot.querySelector('.col-tin');
             var tout = trafficSlot.querySelector('.col-tout');
-            if (tin) tin.textContent = '↓ ' + fmtBps(t.in_bps);
-            if (tout) tout.textContent = '↑ ' + fmtBps(t.out_bps);
+
+            var hasLive = (t.in_bps > 0) || (t.out_bps > 0);
+            var has24h  = (t.bytes_24h || 0) > 0;
+
+            if (hasLive) {
+                if (tin)  tin.textContent  = '↓ ' + fmtBps(t.in_bps);
+                if (tout) tout.textContent = '↑ ' + fmtBps(t.out_bps);
+                card.style.opacity = '1';
+            } else if (has24h) {
+                if (tin)  tin.innerHTML  = '<span style="color:var(--muted);font-size:10px;">24h ↓</span> ' + fmtBytes(t.bytes_in_24h || 0);
+                if (tout) tout.innerHTML = '<span style="color:var(--muted);font-size:10px;">24h ↑</span> ' + fmtBytes(t.bytes_out_24h || 0);
+                card.style.opacity = '1';
+            } else {
+                if (tin)  tin.innerHTML  = '<span style="color:var(--muted);font-size:10px;">No data yet</span>';
+                if (tout) tout.innerHTML = '';
+                card.style.opacity = '0.7';
+            }
+        }
+
+        var ageEl = card.querySelector('.col-age');
+        if (ageEl && t.age_sec !== null && t.age_sec !== undefined) {
+            ageEl.textContent = t.age_sec + 's ago';
+        } else if (ageEl) {
+            ageEl.textContent = 'no live data';
         }
 
         if (alertSlot) {
@@ -926,6 +1008,15 @@ function fmtBps(bps) {
     return bps + ' bps';
 }
 
+function fmtBytes(bytes) {
+    if (!bytes) return '0 B';
+    var units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    var i = 0;
+    var v = bytes;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2) + ' ' + units[i];
+}
+
 function showToast(msg, type) {
     type = type || 'info';
     var container = document.querySelector('.flash-container');
@@ -986,9 +1077,44 @@ refresh().then(function() {
     askNotificationPermission();
     setInterval(fetchAlerts, 5000);
     setInterval(fetchTrafficAll, 3000);
+
+    var tick = 3;
+    setInterval(function() {
+        var el = document.getElementById('dashNextRefresh');
+        if (el) el.textContent = tick;
+        tick = (tick <= 1) ? 3 : (tick - 1);
+    }, 1000);
+
     fetch('/api/queue-status').then(function(r) { return r.json(); }).then(function(q) {
         if (q.active_count + q.queued_count > 0) startQueuePoll();
     }).catch(function() {});
 });
 </script>
+{% endblock %}
+
+{% block modals %}
+<div class="modal fade" id="csvModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cyber-modal">
+            <div class="modal-header">
+                <h5 class="text-primary-glow mb-0"><i class="fa-solid fa-file-csv me-2"></i>Bulk Import Switches</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/upload-csv" method="POST" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <p style="color:var(--muted); font-size:14px;">
+                        CSV Format: <code style="color:var(--primary);">name,ip,enable_pass</code>
+                    </p>
+                    <input type="file" name="csv_file" accept=".csv" required class="form-control cyber-input">
+                    <small class="text-muted mt-2 d-block">
+                        Global credentials apply to all switches automatically.
+                    </small>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn-neon"><i class="fa-solid fa-upload"></i>Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
